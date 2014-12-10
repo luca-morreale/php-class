@@ -1,0 +1,28 @@
+<?php
+/**
+ * Constants all constants regarding the server
+ * 
+ * @author Morreale Luca
+ */
+class CONSTANT{
+	
+	const root = 	'';
+	const css = 	"css/";
+	const html = 	"page/";
+	const php = 	"php/";
+	const image = 	"img/";
+	const js = 		"js/";
+	
+	const database = 	"db";
+	const host = 		"localhost";
+	const user = 		"user";
+	const password = 	"password";
+
+	const salt = "InSertYoUrSaLt";
+	const rounds = 1000;
+		
+	const charset = 'ISO-8859-1';
+	
+}
+
+?>
