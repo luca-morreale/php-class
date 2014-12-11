@@ -1,0 +1,164 @@
+<?php
+/**
+ * Contains all the information needed during the session.
+ * @see CDatabase
+ * 
+ * @author Luca Morreale
+ */
+public class CUser extends CDebug{
+	
+	/**
+	 * Array linked to $_SESSION array of server.
+	 */
+	private $session;
+
+	/**
+	 * Name of the user.
+	 */
+	private $name;
+
+	/**
+	 * Login's nick.
+	 */
+	private $user;
+
+	/**
+	 * Level of information user can have access.
+	 */
+	private $level = 0;
+
+	/**
+	 * Token for this session, it will be NULL if the user is not logged.
+	 */
+	private $token;
+
+	/**
+	 * Id of the user.
+	 */
+	private $id;
+
+	/**
+	 * Database manager
+	 */
+	private $db;
+
+	/**
+	 * Initializes all components of the class
+	 */
+	public __constructor($debug=false){
+		this->setDebug($debug);
+
+		this->db = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
+	}
+
+	/**
+	 * Analyze the parameters of the session.
+	 */
+	private function analyzeSession(){
+		global $_SESSION;
+		$this->session = $_SESSION;
+
+		if(isset($this->session['token'])){
+			$this->name = $this->session['name'];
+			$this->user = $this->session['user'];
+			$this->level = $this->session['level'];
+			$this->token = $this->session['token'];
+			$this->id = $this->session['id'];
+		}else
+			$this->token = null;
+			
+
+		$this->debug(__FUNCTION__, $this->session);
+	}
+
+	/**
+	 * Tries to login with the given credentials, return a bool indicating the result of the operation.
+	 * @return bool
+	 */
+	public function login($user, $pswd, $token){
+		$this->debug(__FUNCTION__, array($user, $pswd, $token));
+
+
+		$this->db->query_select("user", array("user"=>$user));
+		$this->db->fetchNextRecord();
+
+		if($this->db->get('password') == crypt($pswd,'$6$rounds'.CONSTANT::rounds.'$'.CONSTANT::salt.'$')){
+
+			$this->session['token'] = 	$token;
+			$this->session['id'] = 		$this->db->get('id');
+			$this->session['level'] = 	$this->db->get('level');
+			$this->session['user'] = 	$user;
+			$this->session['name'] = 	$this->db->get('name').$this->db->get('surname');
+
+			foreach($this->session as $key => $value)
+				$this->$key = $value;
+
+			global $_SESSION;
+			$_SESSION = $this->session;
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Delete all information of the user and returns a bool indicating the final status of the operation.
+	 * @return bool
+	 */
+	public function logout(){
+		
+		try{
+			session_destroy();
+			unset($this->session);
+			unset($this->token);
+			unset($this->id);
+			unset($this->level);
+			unset($this->user);
+			unset($this->name);
+		}catch(Exception $e){
+			$this->debug(__FUNCTION__, $e->getMessage());
+			return false;
+		}
+
+		$this->debug(__FUNCTION__, $this->session);
+		return true;
+	}
+
+	/**
+	 * Returns a bool indicating the status of the user.
+	 * @return bool
+	 */
+	public function isLogged(){
+		$this->debug(__FUNCTION__, $this->token);
+
+		if(isset($this->$token))
+			return true;
+		return false;
+	}
+
+	/**
+	 *	Verify if the user has the permission needed.
+	 * @return bool
+	 */
+	public function hasPermission($level){
+		$this->debug(__FUNCTION__, $this->level);
+
+		if($this->level >= $level)
+			return true;
+		return false;
+	}
+
+	/**
+	 * Return the accesible user's data.
+	 * @return array
+	 */
+	public function getUserData(){
+		if(this->isLogged())
+			return array('id'=>$this->id,'name'=>$this->$name);
+		return null;
+
+	}
+}
+
+?>
