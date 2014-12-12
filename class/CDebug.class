@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Enables debugging of classes and functions printing their arguments
+ * Enables debugging of classes and functions printing their arguments.
  * 
  * @author Luca Morreale
  */
@@ -9,7 +9,7 @@
 public class CDebug{
 	
 	/**
-	 *
+	 *	State of debug
 	 */
 	private $debug = false;
 

@@ -1,0 +1,627 @@
+
+<?php
+/**
+ * Mangages all operation with database.
+ * @see CDebug
+ * 
+ * @author Morreale Luca
+ */
+class CDatabase extends CDebug{
+	
+    /**
+     * Variable handle the connection with database.
+     */
+    private $connection;
+    /**
+     * Host towards estabilish a connection.
+     */
+    private $host;
+    /**
+     * User to use in the connection.
+     */
+    private $user;
+    /**
+     * Password for the user given.
+     */
+    private $psw;
+    /**
+     * Database to use.
+     */
+    private $db;
+    
+    /**
+     * Last error occured.
+     */
+    private $error;
+    /**
+     * Resource of last query performed.
+     */
+    private $result;
+    
+    /**
+     * Variable allow to delete a table o the entire DB.
+     */
+    private $allow_delete=false;
+    
+    /**
+     * Last query performed.
+     */
+    private $last_query;
+    
+    /**
+     * Number of row, valid only for SELECT.
+     */
+    private $rows;
+    
+    /**
+     * Number of row, valid for INSERT, UPDATE o DELETE.
+     */
+    private $affected;
+    
+    /**
+     * Last record fetched by result.
+     */
+    private $array;
+	
+        
+    /**
+     * Initialize the parameters for the connection and connect.
+     * @param $database			a string that identify the database to use
+     * @param $host				a string identify the host
+     * @param $user				a string containing the user 
+     * @param $password			a string containing the password for the user
+     * @param $persistant		a boolean specify if mast be used a persistant connection
+     * @param $delete			a boolean that set if is possible to use delete action
+     * @param $save				a boolean that specify if is possible or not to use the save copy
+     * 
+     */
+	public function __construct($database, $host='localhost', $user='anonymous', $password='', $persistant=false, $delete=false){
+		
+		$this->host=$host;
+		$this->user=$user;
+		$this->psw=$password;
+		$this->db=$database;
+		$this->allow_delete = $delete;
+		
+		$this->connect($persistant);
+		
+		$this->debug(__FUNCTION__, array('db'=>$database, 'host'=>$host, 'user'=>$user, 'pswd'=>$password, 'persistant'=>$persistant, 'delete'=>$delete));    
+	}
+    /**
+     * Close the connection with the database.
+     */
+	public function __deconstruct(){
+					
+		$this->closeConnection();
+		$this->debug(__FUNCTION__,null);
+	}
+        
+	/**
+	 * Connect to the database using the previously given paramenters.
+	 * @param $persistant	boolean that specify if the connection must be persistant or not
+	 * @return 				boolean that mean if the connection was successful or not
+	 */
+	public function connect($persistant){
+		
+		$this->closeConnection();
+			
+		if($persistant){
+			$this->connection = @mysql_pconnect($this->host, $this->user, $this->psw);
+		}else{
+			$this->connection = @mysql_connect($this->host, $this->user, $this->psw);
+		}
+		
+		if(!$this->connection){
+			this->debug(__FUNCTION__, 'Couldn\'t connect to server: ' . mysql_error());
+			return false;
+		}
+		
+		$this->debug(__FUNCTION__, $persistant);
+		return $this->useDb();
+	}
+	
+	/**
+	 * Select the database
+	 * @return 		boolean depends on the succesful of the operation.
+	 */
+	private function useDb(){ 
+		$this->debug(__FUNCTION__, null);
+
+		if(!mysql_select_db($this->db,$this->connection)){
+			this->debug(__FUNCTION__, 'Couldn\'t select to database: ' . mysql_error());
+			return false;
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * Close the connection to the database.
+	 */
+	public function closeConnection(){
+		
+		$result = mysqli_close($this->connection);
+        $this->debug(__FUNCTION__, $result);   
+	}
+	
+    /**
+     * Verify if is connected to the host.
+     * @return 		boolean that mean if is connected
+     */
+	public function isConnected(){
+		$this->debug(__FUNCTION__, null);
+		
+		if($this->connection)
+			return true;
+		return false;
+	}
+	        
+	/**
+	 * Execute a query and save the result if it is successful 
+	 * @param $query_string 	string of the query to execute
+	 * @param $securize			boolean that mean if the query was securize from sql injection
+	 * @return 					boolean for the success of the operation
+	 * 
+	 */
+	public function query($query_string,$securized=false){
+		$this->debug(__FUNCTION__,array($query_string,$securize));
+
+		if(!$securized)
+			$this->last_query = $this->securizeData($query_string);
+		else
+			$this->last_query = $query_string;
+        
+		if($this->isDeleteQuery($this->last_query) && !$this->$allow_delete)
+			return false;
+
+		@mysqli_free_result($this->result);
+		
+		$this->result = @mysql_query($this->last_query,$this->connection) or $this->debug(__FUNCTION__, "Error during the execution of the query");
+                                
+		if($this->result){
+			$this->rows = @mysqli_num_rows($this->result);            
+			$this->affected = @mysqli_affected_rows($this->connection);
+		}else
+			return false;
+		
+		return true;
+	}
+
+	/**
+	 * Perform a SELECT query.
+	 * @param $table				string to identify the single table to use
+	 * @param $condition			string or array for 'WHERE' condition
+	 * @param $field				string or array to identify what field select
+	 * @param $after_where			string could contain condition after 'WHERE' like 'GROUP BY' or 'ORDER BY'
+	 * @param $befor_where			string could contain condition after 'WHERE' like 'INNER JOIN'
+	 * @param $special_condition	string to include special comparing like '>' or 'LIKE' or 'BETWEEN'
+	 * @return bool 
+	 * 
+	 */
+	public function query_select($table, $condition=false, $field=false, $after_where=false, $before_where=false, $special_condition=false){
+		if(empty($table))
+			return false;
+		
+		$q = 'SELECT ';
+		
+		if($field)
+			$q .= $this->buildString($field,',',false, false);
+		 else
+			$q .= '* ';
+		
+		$q .= 'FROM '.$table.' ';
+		
+		if($before_where){
+			$before_where = $this->securizeData($before_where);
+			$q .= $before_where.' ';
+		}
+		
+		if($condition){
+			$q .= 'WHERE ';
+			$q .= $this->buildString($condition,"AND",true).' ';
+		}
+
+		if($special_condition){
+			$special_condition = $this->securizeData($special_condition);			
+			$q .= $special_condition.' ';
+		}
+		
+		if($after_where){
+			$after_where = $this->securizeData($after_where);
+			$q .= $after_where.' ';
+		}
+		
+		$this->debug(__FUNCTION__,array($table, $condition, $field, $after_where, $before_where, $special_condition));
+		return $this->query($q, true);
+	}
+
+	/**
+	 * Perform an INSERT query.
+	 * @param $table	string, table where execute the insert	
+	 * @param $set		array or string, fields to set
+	 * @return			boolean, successful of the query	
+	 */
+	public function query_insert($table, $set){
+		if(empty($table) || empty($set))
+			return false;
+		
+		$q = 'INSERT INTO '. $table .' SET ';
+		
+		$q .= $this->buildString($set,',',true);
+		
+		
+		$this->debug(__FUNCTION__,array('table'=>$table, 'set'=>$set));           
+		return $this->query($q,true);
+	}
+
+	/**
+	 * Perform an UPDATE query.
+	 * @param $table		string, table where execute the update	
+	 * @param $set			array or string, fields to set
+	 * @param $condition	array or string, fields of WHERE clausole
+	 * @return				boolean, successful of the query
+	 */
+	public function query_update($table, $set, $condition=false){
+		if(empty($table) || empty($set))
+			return false;
+		
+		$q = 'UPDATE '. $table .' SET ';
+		
+		$q .= $this->buildString($set,',',true);
+		
+		if($condition){
+			$q .= " WHERE ";
+			$q .= $this->buildString($condition,'AND',true);
+		}
+		
+		$this->debug(__FUNCTION__,array('table'=>$table, 'set'=>$set, 'condition'=>$condition));
+		return $this->query($q,true);
+		
+	}
+
+	/**
+	 * Perform an DELETE query.
+	 * @param $table		string, table where execute the delete
+	 * @param $condition	array or string, fields of WHERE clausole
+	 * @param $limit		int, how many delete execute if more than one recors is found
+	 * @return				boolean, successful of the query
+	 */
+	public function query_delete($table,$condition=false,$limit=false){
+		if(empty($table))
+			return false;
+		
+		$q = 'DELETE FROM '. $table .' ';
+		
+		if($condition){
+			$q .= 'WHERE ';
+			$q .= $this->buildString($condition,'AND',true);
+		}
+		
+		if($limit)
+			$q .= 'LIMIT '.$limit;
+		
+		$this->debug(__FUNCTION__,array('table'=>$table,'condition'=>$condition,'limit'=>$limit));
+		return $this->query($q,true);
+	}
+
+	/** 
+	 * Generate a string using the give parameters for the WHERE's clausoles or SELECT's field
+	 * @param $args			array or string containg the fields on which works
+	 * @param $separator	string used to separe two element
+	 * @param $add_key		bool used to specify if must be added the key from the array {@args} and the char '='
+	 * @param $quotes       bool to quote the value given in {@args} (won't used quotes if the key is not added)
+	 * @return string
+	 * 
+	 * Example:
+	 * 		buildString(array('id'=>5), false, true);
+	 * will generate:
+	 * 		id = '5'
+	 * or like this: 
+	 * 		buildString(array('id'=>5), ',', true);
+	 * will generate:
+	 * 		id = '5' ,
+	 * or like this: 
+	 * 		buildString(array('id'=>5), ',');
+	 * will generate:
+	 * 		 5 ,
+	 */
+	private function buildString($args, $separator=false, $add_key=false, $quotes=true){
+		
+		$string = '';
+		$args = $this->securizeData($args);
+		
+		if(is_array($args)){
+			foreach($args as $key=>$value){
+				if($add_key)
+					$string .= $key.'=';
+				
+				if($quotes && $add_key)
+					$string .= "'";
+				$string.= $value;
+				if($quotes && $add_key)
+					$string .= "' ";
+
+				if($separator)
+					$string .= $separator.' ';
+			}
+			$string = substr($string,0,-strlen($separator)-1);
+		}else{
+			
+			$string = $arg.' ';
+		}
+		
+		$this->debug(__FUNCTION__,array('args'=>$args, 'separator'=>$separator, 'add_key'=>$add_key, 'quotes'=>$quotes));
+		return $string;
+	}
+
+	/**
+     * Prevent the sql injection.
+     * @param $data		string or array, data to use in a query
+     * @return 			string or array, data securized
+     */
+	private function securizeData($data){
+
+		if(is_array($data)){
+			foreach($data as $key=>$value){
+				$key = mysql_real_escape_string($key);
+				if(is_array($value))	
+					$data[$key] = $this->securizeData($value);
+				else
+					$data[$key] = mysql_real_escape_string($value);
+			}
+		}else{
+			$data = mysql_real_escape_string($data);
+		}
+		
+		$this->debug(__FUNCTION__,$data);
+		return $data;
+	}
+
+	/**
+	 * Fetch the next record of last query performed.
+	 * @return 		boolean, means the succes or not to fetch the record
+	 */	
+	public function hasNextRecord(){
+		$this->debug(__FUNCTION__,$this->result);
+
+		if(!isset($this->result))
+			return false;
+		
+		$this->array = mysql_fetch_assoc($this->result);
+		if($this->array)
+			return true;
+		return false;
+	}
+
+	/**
+	 * Return last record successful fetched.
+	 * @return 		array
+	 */
+	public function getRecord(){
+		$this->debug(__FUNCTION__,$this->array);
+
+		return $this->array;                
+	}
+
+	/**
+	 * Return the value of the specified field.
+	 * @param $field	string containing the name of field
+	 * @return 			mixed, value found
+	 */
+	public function getField($field){
+		$this->debug(__FUNCTION__,array('field' => $field, 'array' => $this->array));
+
+		if(isset($this->array[$field]))
+			return $this->array[$field];
+		return null;
+		
+	}
+
+	/**
+	 * Fetch the next record of last query performed and returns it.
+	 * @return 		array
+	 * @see fetchNextRecord
+	 * @see getRecordArray
+	 */
+	public function getNextRecord(){
+		$this->debug(__FUNCTION__,$this->result);
+
+		if($this->hasNextRecord())
+			return $this->getRecordArray();
+		return null;
+	}
+
+	/**
+	 * Return how much rows has the result of the last query executed,
+	 * both if is a SELECT or an other type of operation like INSERT, UPDATE o DELETE.
+	 * @return int
+	 */
+	public function num(){
+		$this->debug(__FUNCTION__,null);
+		
+		if($this->rows > 0)
+			return $this->rows;
+		return $this->affected;
+	}
+
+	/**
+	 * Count the rows of a table, with a condition if given.
+	 * @param $table		string, table where perform the count
+	 * @param $condition	string or array, condition of the fields to count
+	 * @return 				int, numeber of the table
+	 */
+	public function countRows($table, $condition=false){
+		$this->debug(__FUNCTION__,array('table'=>$table, 'condition'=>$condition));
+		
+		$exec = $this->query_select($table,$condition,'count(*)');
+		
+		if(!$exec)
+			return false;
+		$this->hasNextRecord();
+		return $this->getField("count(*)");
+		
+	}
+
+	/**
+	 * Verify if the given query is a 'DELETE' query.
+	 * @return bool
+	 */
+	private function isDeleteQuery($query){
+		$this->debug(__FUNCTION__,$query);
+
+		$query = strtolower($query);
+		if(strpos($query,'delete') < 10 && trpos($query,'delete')!==false)
+			return true;
+		return false;
+	}
+
+	/**
+	 * Verify if the given query is a 'INSERT' query.
+	 * @return bool
+	 */
+	private function isInsertQuery($query){
+		$this->debug(__FUNCTION__,$query);
+
+		$query = strtolower($query);
+		if(strpos($query,'insert') < 10 && strpos($query,'insert')!==false)
+			return true;
+		return false;
+	}
+
+	/**
+	 * Verify if the given query is a 'UPDATE' query.
+	 * @return bool
+	 */
+	private function isUpdateQuery($query){
+		$this->debug(__FUNCTION__,$query);
+
+		$query = strtolower($query);
+		if(strpos($query,'update') < 10 && strpos($query,'update')!==false)
+			return true;
+		return false;
+	}
+
+	/**
+	 * Verify if the given query is a 'SELECT' query.
+	 * @return bool
+	 */
+	private function isSelectQuery($query){
+		$this->debug(__FUNCTION__,$query);
+
+		$query = strtolower($query);
+		if(strpos($query,'select') < 10 && strpos($query,'select')!==false)
+			return true;
+		return false;
+	}
+	
+	/**
+	 * Return the last query executed.
+	 * @return string
+	 */
+	public function getLastQuery(){
+		$this->debug(__FUNCTION__,null);
+		return $this->last_query;
+	}
+    
+	/**
+	 * Allow to delete record from a table.
+	 * @param $bool		boolean, value to indicate the permission
+	 * @return 			void
+	 */
+	public function allowDelete($bool){
+		$this->allow_delete = $bool;
+		$this->debug(__FUNCTION__,$bool);
+	}
+
+	/**
+	 * Returns last insert ID.
+	 * @return 		int, ID of the last record inserted in the table 
+	 */
+	public function getLastInsertID(){
+		$this->debug(__FUNCTION__,null);
+		return mysqli_insert_id($this->$connection);
+	}
+
+	/**
+	 * Return number of field has last query executed.
+	 * @return 		int
+	 */
+	public function numFields() {
+		$this->debug(__FUNCTION__,null);
+		return @mysqli_field_count($this->result);
+	}
+    
+	public function getSchemaTable($table){
+		$this->query("SHOW COLUMNS FROM $table");
+		$i = 0;
+		$return = array();
+		while ($info = $this->getNextRecord) {
+			foreach($info as $key => $value)
+				$return[$i][$key] = $value;
+			$i++;
+		}
+		
+		$this->debug(__FUNCTION__,null);
+		return $return;
+	}
+
+    /*
+	 * Return all tables' name in the database
+	 * @return 		array
+	 */
+	public function getTableList() {
+		$this->query("SHOW TABLES");
+		$i = 0;
+		$return = array();
+		while ($info = $this->getNextRecord) {
+			$return[$i]["table"] = $info[0];
+			$return[$i]["tablespace_name"] = $this->Database;
+			$return[$i]["database"] = $this->Database;
+			$i++;
+		}
+		
+		$this->debug(__FUNCTION__,null);
+		return $return;
+	}
+
+	/**
+	 * Lock or Unlock table.
+	 * @param $table	string, table to lock
+	 * @param $mode		string, mode to lock
+	 * @return 			boolean
+	 */
+	public function lock($table, $mode = "write") {
+		$this->debug(__FUNCTION__,array($table, $mode));
+
+		if (!$this->connection)    
+			$this->connect();
+
+		$res = @mysqli_query("lock tables $table $mode", $this->connection);
+		if (!$res){
+			$this->debug(__FUNCTION__, "lock($table, $mode) failed.");
+			return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * Unlock all tables.
+	 * @return 		boolean, true if success
+	 */
+	public function unlock() {
+		$this->debug(__FUNCTION__,null);
+
+		if (!$this->connection)    
+			$this->connect();
+
+		$res = @mysqli_query("unlock tables");
+		if (!$res){
+			$this->debug(__FUNCTION__, "unlock() failed.");
+			return false;
+		}
+		return true;
+	}
+     
+}
+
+?>
