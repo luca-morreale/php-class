@@ -1,0 +1,175 @@
+<?php
+/**
+ * Site manager.
+ * @see CDatabase
+ * @see CDebug
+ * 
+ * @author Luca Morreale
+ */
+public class CPage extends CDebug{
+
+    /**
+     * Data extracted from request array.
+     */
+    private $request;
+    
+    /**
+     * User of this session.
+     */
+    private $user;
+    
+    /**
+     * Page to include.
+     */
+    private $page;
+    
+    /**
+     * Database connection handler.
+     */
+    private $db;
+    
+    /**
+     * Initialize the components and variables needed.
+     */
+    public function __construct($request, $debug=false){
+        $this->setDebug($debug);
+        $this->user = new CUser($debug);
+        $this->db = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
+        $this->analyzeRequest($request);
+
+        $this->debug(__FUNCTION__, $request);
+    }
+
+    /**
+     * Analyzes the data contained in request variables.
+     */
+    private function analyzeRequest($request){
+
+        foreach($request as $key=>$value){
+            if(strpos($key,CONSTANT::root."index_php?") !== false)
+                $key = explode(CONSTANT::root."index_php?",$key)[1];
+            $this->request[$key] = $value;
+        }
+
+        if(isset($this->request['r'])){
+            $this->page = $this->request['r'];
+        } else {
+            $this->page = 'home';
+        }
+        
+            $key = explode(CONSTANT::root."index_php?",$key)[1];
+
+        $this->debug(__FUNCTION__, $request);
+    }
+
+    /**
+     * Starts to build the currently page.
+     */
+    public function startPage(){
+
+        echo CHtml::openTag("!DOCTYPE html");
+        echo CHtml::opentag('html');
+        echo CHtml::opentag('head');
+        $this->renderDefaultTag();
+
+        $this->debug(__FUNCTION__, null);
+    }
+
+    public function closeHead(){
+        
+        echo CHtml::closetag('head');
+        echo CHtml::opentag('body');
+        $this->renderDefualtTemplate();
+    }
+
+    /**
+     * Closes the currently page.
+     */
+    public function endPage(){
+        
+        echo CHtml::closeTag('body');
+        echo CHtml::closeTag('html');
+        
+        $this->debug(__FUNCTION__, null);
+    }
+
+    /**
+     * Prints the defaults head tag.
+     */
+    private function renderDefaultTag(){ //TODO
+
+    }
+
+    /**
+     * Prints the defaults body template.
+     */
+    private function renderDefualtTemplate(){ //TODO
+
+    }
+
+    /**
+     * Returns the array containing the page required.
+     * @return array
+     */
+    public function getPage(){
+        if($this->user->isAllowed($this->page)){
+            return array('js' => CONSTANT::js.$this->page.'.js',    'php' => CONSTANT::php.$this->page.'.php',  'html' => CONSTANT::html.$this->page.'.inc');
+        } elseif ($this->user->isLogged()) {
+            return array('js' => CONSTANT::js.'forbidden.js',       'php' =>  CONSTANT::php.'forbidden.php',    'html' => CONSTANT::html.'forbidden.inc');
+        } else {
+            return array('js' => CONSTANT::js.'login.js',           'php' => CONSTANT::php.'login.php',         'html' => CONSTANT::html.'login.inc');
+        }
+    }
+
+    /**
+     * Tries to login with the credential saved in {@request} array.
+     * @return bool
+     */
+    public function tryLogin(){
+        return $this->user->login($this->request['user'],$this->request['password'],$this->getUniqueToken());
+    }
+
+    /**
+     * Tries to logout.
+     * @return bool
+     */
+    public function tryLogout(){
+        return $this->user->logout();
+    }
+    
+    /**
+     * Returns a bool indicating the status of the user.
+     * @return bool
+     */
+    public function isLogged(){
+        return $this->user->isLogged();
+    }
+
+    /**
+     * Give the value of the 'key'
+     * @param mixed
+     */
+    public function get($key){
+        return isset($this->request[$key]) ? $this->request[$key] : null;
+    }
+
+    /**
+     * Returns the accessible user data.
+     * @return array
+     */
+    public function getSensibleData(){
+        return $this->user->getData();
+    }
+
+    /**
+     * Returns an unique hash.
+     * @return string
+     */
+    public function getUniqueToken(){
+        return md5( uniqid('auth', true) );
+    }
+
+
+}
+
+?>

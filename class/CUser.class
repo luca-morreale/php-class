@@ -2,6 +2,7 @@
 /**
  * Contains all the information needed during the session.
  * @see CDatabase
+ * @see CDebug
  * 
  * @author Luca Morreale
  */
@@ -49,6 +50,7 @@ public class CUser extends CDebug{
 		this->setDebug($debug);
 
 		this->db = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
+		session_start();
 	}
 
 	/**
@@ -145,6 +147,15 @@ public class CUser extends CDebug{
 		$this->debug(__FUNCTION__, $this->level);
 
 		if($this->level >= $level)
+			return true;
+		return false;
+	}
+
+	public function isAllowed($page){
+		$this->db->query_select('page',array('page' => $page));
+		$page_info = $this->db->getNextRecord();
+
+		if($this->level >= $page_info['level'])
 			return true;
 		return false;
 	}
