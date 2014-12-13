@@ -6,7 +6,7 @@
  * 
  * @author Luca Morreale
  */
-public class CUser extends CDebug{
+class CUser extends CDebug{
 	
 	/**
 	 * Array linked to $_SESSION array of server.
@@ -46,10 +46,10 @@ public class CUser extends CDebug{
 	/**
 	 * Initializes all components of the class
 	 */
-	public __constructor($debug=false){
-		this->setDebug($debug);
+	public function __constructor($debug=false){
+		$this->setDebug($debug);
 
-		this->db = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
+		$this->db = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
 		session_start();
 	}
 
@@ -165,8 +165,8 @@ public class CUser extends CDebug{
 	 * @return array
 	 */
 	public function getUserData(){
-		if(this->isLogged())
-			return array('id'=>$this->id,'name'=>$this->$name);
+		if($this->isLogged())
+			return array('id'=>$this->id,'name'=>$this->$name,'level'=>$this->level);
 		return null;
 
 	}

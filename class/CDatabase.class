@@ -1,4 +1,3 @@
-
 <?php
 /**
  * Mangages all operation with database.
@@ -112,7 +111,7 @@ class CDatabase extends CDebug{
 		}
 		
 		if(!$this->connection){
-			this->debug(__FUNCTION__, 'Couldn\'t connect to server: ' . mysql_error());
+			$this->debug(__FUNCTION__, 'Couldn\'t connect to server: ' . mysql_error());
 			return false;
 		}
 		
@@ -128,7 +127,7 @@ class CDatabase extends CDebug{
 		$this->debug(__FUNCTION__, null);
 
 		if(!mysql_select_db($this->db,$this->connection)){
-			this->debug(__FUNCTION__, 'Couldn\'t select to database: ' . mysql_error());
+			$this->debug(__FUNCTION__, 'Couldn\'t select to database: ' . mysql_error());
 			return false;
 		}
 		

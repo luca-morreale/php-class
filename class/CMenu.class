@@ -1,0 +1,152 @@
+<?php
+/**
+ * Renders menu from query or from array.
+ */
+class CMenu extends CDebug{
+    
+    /**
+     * Database connection manager.
+     */
+    private $db;
+    /**
+     * Array containing class and id for each type of element.
+     */
+    private $css;
+
+    /**
+     * Flag to wrap the menu with a box.
+     */
+    private $wrap;
+
+    /**
+     * Initializes all the needed components.
+     */
+    public function __construct($wrap=true, $style=array(), $debug=false){
+        $this->setDebug($debug);
+        $this->wrap = $wrap;
+        $this->db = new CDatabase(CONSTANT::database,CONSTANT::host,CONSTANT::user,CONSTANT::password);
+        
+        $this->setStyle($style);
+
+        $this->debug(__FUNCTION__,array('style'=>$style,'wrap' => $wrap));
+    }
+
+    /**
+     * Merges the default style with the given one.
+     */
+    private function setStyle($style){
+        $default_css = array();
+        $default_css['div']['class'] = 'mainmenu';
+        $default_css['ul'] = array();
+        $default_css['li'] = array();
+        $default_css['a']  = array();
+        /*
+        $default_css['ul']['id'] = 
+        $default_css['ul']['id'] = 
+        $default_css['ul']['class'] = 
+        $default_css['li']['id'] = 
+        $default_css['li']['class'] = 
+        $default_css['a']['id'] = 
+        $default_css['a']['class'] = 
+        */
+        $this->css = array_merge($default_css, $style);
+    }
+
+    /**
+     * Renders the menu using the given argument.
+     * @param $args    array containing information to perform a query or create a static menu.
+     */
+    public function renderMenu($args){
+
+        if($this->wrap)
+            echo CHtml::openTag('div', $this->css['div']).'\n';
+        echo CHtml::openTag('ul',$this->css['ul']).'\n';
+        
+        if(isset($args['query'])){
+            if(!isset($args['query']['where']))
+                $args['query']['where'] = array();
+            $this->renderRecursiveQuery($args['query'], 0);
+        } else {
+            $this->renderRecursiveQuery($args);
+        }
+
+        echo CHtml::closeTag('ul').'\n';
+        if($this->wrap)
+            echo CHtml::closeTag('div').'\n';
+    }
+
+    /**
+     * Renders the menu using the given data to perform queries.
+     * @param $args         array containing the indications
+     * @param $id_parents   integer indicating the parent menu
+     */
+    private function renderReoursiveQuery($args,$id_parents){
+
+        $db = new CDatabase(CONSTANT::database,CONSTANT::host,CONSTANT::user,CONSTANT::password);
+        $table = $args['table'];
+        $where = array_merge($args['where'], array('sub_menu' => $id_parents));
+        $db->query_select($table,$where);
+        
+        while($db->hasNextRecord()){
+            foreach($db->getRecord() as $key => $value)
+                $$key = $value;
+
+            echo CHtml::openTag('li',$this->css['li']);
+            echo $this->renderMenuItem(array('label' => $label, 'url' => array("r" => $page))).'\n';
+            
+            $where['sub_menu'] = $id;
+            $this->db->query_select($table,$where);
+
+            if($this->db->hasNextRecord()){
+                echo CHtml::openTag('ul', $this->css['ul']).'\n';
+                $this->renderMenuQueryRecursive(array('table'=>$table, 'where'=>$where), $id);
+                echo CHtml::closeTag('ul').'\n';
+            }
+            echo CHtml::closeTag('li').'\n';
+        }
+        
+        $this->debug(__FUNCTION__, array('args'=>$args, 'id'=>$id_parents));
+    }
+
+    /**
+     * Renders recursively a static menu.
+     * @param $args    array containing the structure of the menu.
+     */
+    private function renderRecursiveStatic($items){
+        
+        foreach($items as $item){
+            $options=isset($item['itemOptions']) ? $item['itemOptions'] : $this->css['li'];
+            
+            echo CHtml::openTag('li', $options);
+            echo $this->renderMenuItem($item).'\n';
+
+            if(isset($item['items']) && !empty($item['items']))
+            {
+                echo CHtml::openTag('ul', isset($item['submenuOptions']) ? $item['submenuOptions'] : $this->css['ul']).'\n';
+                $this->renderRecoursiveStatic($item['items']);
+                echo CHtml::closeTag('ul').'\n';
+            }
+
+            echo CHtml::closeTag('li').'\n';
+        }
+
+        $this->debug(__FUNCTION__, $items);
+    }
+
+    /**
+     * Render a singole menu items.
+     * @param $item    array describing the item to be rendered.
+     * Three keys allowed: 'label' for the text to display
+     *                     'url' for the link
+     *                     'linkOption' for the style of the link  
+     */
+    protected function renderMenuItem($item){
+        if(isset($item['url']))
+            return CHtml::link($item['label'],$item['url'],isset($item['linkOptions']) ? $item['linkOptions'] : $this->css['a']);
+        
+        return CHtml::tag('span',isset($item['linkOptions']) ? $item['linkOptions'] : $this->css['a'], $item['label']);
+    }
+
+}
+
+?>

@@ -6,7 +6,7 @@
  * 
  * @author Luca Morreale
  */
-public class CPage extends CDebug{
+class CPage extends CDebug{
 
     /**
      * Data extracted from request array.
@@ -67,9 +67,9 @@ public class CPage extends CDebug{
      */
     public function startPage(){
 
-        echo CHtml::openTag("!DOCTYPE html");
-        echo CHtml::opentag('html');
-        echo CHtml::opentag('head');
+        echo CHtml::openTag("!DOCTYPE html").'\n';
+        echo CHtml::opentag('html').'\n';
+        echo CHtml::opentag('head').'\n';
         $this->renderDefaultTag();
 
         $this->debug(__FUNCTION__, null);
@@ -77,8 +77,8 @@ public class CPage extends CDebug{
 
     public function closeHead(){
         
-        echo CHtml::closetag('head');
-        echo CHtml::opentag('body');
+        echo CHtml::closetag('head').'\n';
+        echo CHtml::opentag('body').'\n';
         $this->renderDefualtTemplate();
     }
 
@@ -87,8 +87,8 @@ public class CPage extends CDebug{
      */
     public function endPage(){
         
-        echo CHtml::closeTag('body');
-        echo CHtml::closeTag('html');
+        echo CHtml::closeTag('body').'\n';
+        echo CHtml::closeTag('html').'\n';
         
         $this->debug(__FUNCTION__, null);
     }
