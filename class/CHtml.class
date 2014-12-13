@@ -1,0 +1,579 @@
+<?php
+/**
+ * Generates html tag.
+ */
+class CHtml{
+	
+	/**
+	 * Boolean render the special attributes
+	 */
+	public static $renderSpecialAttributesValue=false;
+	
+	/**
+	 * The CSS class for required labels. Defaults to 'required'.
+	 */
+	public static $requiredCss='required';
+	/**
+	 * The HTML code to be prepended to the required label.
+	 */
+	public static $beforeRequiredLabel='';
+	/**
+	 * The HTML code to be appended to the required label.
+	 */
+	public static $afterRequiredLabel=' <span class="required">*</span>';
+		
+	/**
+	 * Generates an HTML element.
+	 * @param string $tag 			the tag name
+	 * @param array $htmlOptions 	the element attributes. The values will be HTML-encoded using {@link encode()}.
+	 * @param mixed $content 		the content to be enclosed between open and close element tags. It will not be HTML-encoded.
+	 * 							If false, it means there is no body content.
+	 * @param boolean $closeTag 	whether to generate the close tag.
+	 * @return string 				the generated HTML element tag
+	 */
+	public static function tag($tag,$htmlOptions=array(),$content=false,$closeTag=true)
+	{
+		
+		$html='<' . $tag . self::renderAttributes($htmlOptions);
+		
+		if($content===false)
+			return $closeTag ? $html.' />' : $html.'>';
+		else
+			return $closeTag ? $html.'>'.$content.'</'.$tag.'>' : $html.'>'.$content;
+	}
+	
+	
+	/**
+	 * Generates an open HTML element.
+	 * @param string $tag 			the tag name
+	 * @param array $htmlOptions 	the element attributes. The values will be HTML-encoded using {@link encode()}.
+	 * @return string 				the generated HTML element tag
+	 */
+	public static function openTag($tag,$htmlOptions=array())
+	{
+		return '<' . $tag . self::renderAttributes($htmlOptions) . '>';
+	}
+	
+	/**
+	 * Generates a close HTML element.
+	 * @param string $tag 	the tag name
+	 * @return string the 	generated HTML element tag
+	 */
+	public static function closeTag($tag)
+	{
+		return '</'.$tag.'>';
+	}
+	
+	/**
+	 * Generates an HTML comment.
+	 * @param string $text 	the text to comment
+	 * @return string 		the generated HTML element tag
+	 */
+	public static function commentHtml($text)
+	{
+		return '<!-- ' . $text . ' -->';
+	}
+	
+	/**
+	 * Generates an HTML comment.
+	 * @return string 	the begining HTML comment tag
+	 */
+	public static function openComment(){
+		return '<!-- ';
+	}
+	
+	/**
+	 * Generates an HTML comment.
+	 * @return string 	the ending HTML comment tag
+	 */
+	public static function closeComment(){
+		return ' -->';
+	}
+	
+	/**
+	 * Generates a meta tag that can be inserted in the head section of HTML page.
+	 * @param string $content 		content attribute of the meta tag
+	 * @param string $name 			name attribute of the meta tag. If null, the attribute will not be generated
+	 * @param string $httpEquiv 	http-equiv attribute of the meta tag. If null, the attribute will not be generated
+	 * @param array $options 		other options in name-value pairs (e.g. 'scheme', 'lang')
+	 * @return string 				the generated meta tag
+	 */
+	public static function metaTag($content,$name=null,$httpEquiv=null,$options=array())
+	{
+		
+		if($name === null && $httpEquiv === null)
+			return '';
+		
+		if($name!==null)
+			$options['name']=$name;
+		if($httpEquiv!==null)
+			$options['http-equiv']=$httpEquiv;
+		
+		$options['content']=$content;
+		
+		return self::tag('meta',$options);
+	}
+	
+	/**
+	 * Generates a link tag that can be inserted in the head section of HTML page.
+	 * @param string $relation 	rel attribute of the link tag. If null, the attribute will not be generated.
+	 * @param string $type 		type attribute of the link tag. If null, the attribute will not be generated.
+	 * @param string $href 		href attribute of the link tag. If null, the attribute will not be generated.
+	 * @param array $options 	other options in name-value pairs
+	 * @return string 			the generated link tag
+	 */
+	public static function linkTag($relation=null,$type=null,$href=null,$options=array())
+	{
+		if($relation!==null)
+			$options['rel']=$relation;
+		if($type!==null)
+			$options['type']=$type;
+		if($href!==null)
+			$options['href']=$href;
+		
+		return self::tag('link',$options);
+	}
+	
+	/**
+	 * Encloses the given CSS content with a CSS tag.
+	 * @param string $text 		the CSS content
+	 * @param string $option 	the options that this CSS has.
+	 * @return string 			the CSS properly enclosed
+	 */
+	public static function css($text,$option='')
+	{
+		if($option!=='')
+			$option = self::renderAttributes($option);
+		
+		return "<style type=\"text/css\"{$media}>\n". $text ."\n</style>";
+	}
+	
+	/**
+	 * Registers a 'refresh' meta tag.
+	 * This method can be invoked anywhere in a view. It will register a 'refresh'
+	 * meta tag with {@link CClientScript} so that the page can be refreshed in
+	 * the specified seconds.
+	 * @param integer $seconds 		the number of seconds to wait before refreshing the page
+	 * @param string $url 			the URL to which the page should be redirected to. If empty, it means the current page.
+	 */
+	public static function refresh($seconds,$url='')
+	{
+		$content="$seconds";
+		if($url!=='')
+			$content.=';url='.$url;
+		
+		return self::metaTag($content,null,'refresh');
+	}
+	
+	/**
+	 * Links to the specified CSS file.
+	 * @param string $url 	the CSS URL
+	 * @param string $media the media that this CSS should apply to.
+	 * @return string 		the CSS link.
+	 */
+	public static function cssFile($url,$media='')
+	{
+		$media = $media!=='' ? $media : null;
+		$url = CONSTANT::css.$url;
+		
+		$url .= substr($url,-4) != '.css' ? '.css' : '';
+		
+		return CHtml::linkTag('stylesheet','text/css',$url,$media);
+	}
+	
+	/**
+	 * Encloses the given JavaScript within a script tag.
+	 * @param string $text 			the JavaScript to be enclosed
+	 * @param array $htmlOptions 	additional HTML attributes (see {@link tag})
+	 * @return string 				the enclosed JavaScript
+	 */
+	public static function script($text, $htmlOptions=array())
+	{
+		$defaultHtmlOptions=array(
+			'type'=>'text/javascript',
+		);
+		$htmlOptions=array_merge($defaultHtmlOptions,$htmlOptions);
+		
+		return self::tag('script',$htmlOptions,"\n{$text}\n");
+	}
+	
+	/**
+	 * Includes a JavaScript file.
+	 * @param string $url 			URL for the JavaScript file
+	 * @param array $htmlOptions 	additional HTML attributes (see {@link tag})
+	 * @return string 				the JavaScript file tag
+	 */
+	public static function scriptFile($url, $htmlOptions=array())
+	{
+		//$url .= substr($url,-3) != '.js' ? '.js' : '';
+		$defaultHtmlOptions=array(
+			'type'=>'text/javascript',
+			'src'=>CONSTANT::js."".$url
+		);
+		$htmlOptions=array_merge($defaultHtmlOptions,$htmlOptions);
+		
+		return self::tag('script',$htmlOptions,'');
+	}
+	
+	/**
+	 * Generates an opening form tag.
+	 * Note, only the open tag is generated. A close tag should be placed manually at the end of the form.
+	 * @param mixed $action 		the form action URL
+	 * @param string $method 		form method (e.g. post, get)
+	 * @param array $htmlOptions 	additional HTML attributes (see {@link tag}).
+	 * @return string 				the generated form tag.
+	 * @see endForm
+	 */
+	public static function beginForm($action='',$method='post',$htmlOptions=array())
+	{
+		$htmlOptions['action'] = $url = $action;
+		$htmlOptions['method'] = $method;
+		
+		return self::tag('form',$htmlOptions,false,false);
+	}
+	
+	/**
+	 * Generates a closing form tag.
+	 * @return string the generated tag
+	 */
+	public static function endForm()
+	{
+		return '</form>';
+	}
+	
+	/**
+	 * Generates a hidden field for storing persistent page states.
+	 * @param string $value 	the persistent page states in serialized format
+	 * @return string 			the generated hidden field
+	 */
+	public static function hiddenField($name,$value)
+	{
+		return '<input type="hidden" name="'.$name.'" value="'.$value.'" />';
+	}
+	
+	/**
+	 * Generates a submit button.
+	 * @param string $label 		the button label
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated button tag
+	 */
+	public static function submitButton($label='submit',$htmlOptions=array())
+	{
+		$htmlOptions['type']='submit';
+		
+		return self::button($label,$htmlOptions);
+	}
+	
+	/**
+	 * Generates a reset button.
+	 * @param string $label 		the button label
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated button tag
+	 */
+	public static function resetButton($label='reset',$htmlOptions=array())
+	{
+		$htmlOptions['type']='reset';
+		
+		return self::button($label,$htmlOptions);
+	}
+	
+	/**
+	 * Generates a label tag.
+	 * @param string $label 		label text. Note, you should HTML-encode the text if needed.
+	 * @param string $for 			the ID of the HTML element that this label is associated with.
+	 * 								If this is false, the 'for' attribute for the label tag will not be rendered.
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated label tag
+	 */
+	public static function label($label,$for,$htmlOptions=array())
+	{
+		if($for===false)
+			unset($htmlOptions['for']);
+		else
+			$htmlOptions['for']=$for;
+		if(isset($htmlOptions['required']))
+		{
+			if($htmlOptions['required'])
+			{
+				if(isset($htmlOptions['class']))
+					$htmlOptions['class'].=' '.self::$requiredCss;
+				else
+					$htmlOptions['class']=self::$requiredCss;
+				$label=self::$beforeRequiredLabel.$label.self::$afterRequiredLabel;
+			}
+			unset($htmlOptions['required']);
+		}
+		$htmlOptions = self::generateClass($htmlOptions,'label');
+		
+		return self::tag('label',$htmlOptions,$label);
+	}
+	
+	/**
+	 * Generates an input HTML tag.
+	 * This method generates an input HTML tag based on the given input name and value.
+	 * @param string $type 			the input type (e.g. 'text', 'radio')
+	 * @param string $name 			the input name
+	 * @param string $value 		the input value
+	 * @param array $htmlOptions 	additional HTML attributes for the HTML tag (see {@link tag}).
+	 * @return string 				the generated input tag
+	 */
+	public static function inputField($type,$name,$value,$htmlOptions)
+	{
+		$htmlOptions['type']=$type;
+		$htmlOptions['value']=$value;
+		$htmlOptions['name']=$name;
+		
+		$htmlOptions = self::generateClass($htmlOptions,$type);
+		
+		return self::tag('input',$htmlOptions);
+	}
+	
+	
+	/**
+	 * Generates a hyperlink tag.
+	 * @param string $text 			link body. Therefore you can pass in HTML code such as an image tag.
+	 * @param mixed $url 			a URL or an action route that can be used to create a URL.
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated hyperlink
+	 */
+	public static function link($text,$url='#',$htmlOptions=array())
+	{
+		if($url!==''){
+			if(!is_array($url))
+				$url = "index.php?".$url;
+			else
+				$url['url'] = "index.php";
+			$htmlOptions['href']= self::normalizeUrl($url);
+		}
+		
+		return self::tag('a',$htmlOptions,$text);
+	}
+	
+	/**
+	 * Generates a external hyperlink tag.
+	 * @param string $text 			link body. Therefore you can pass in HTML code such as an image tag.
+	 * @param mixed $url 			a URL or an action route that can be used to create a URL.
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated hyperlink
+	 */
+	public static function externalLink($text,$url='#',$htmlOptions=array())
+	{
+		if($url!=='')
+			$htmlOptions['href']=self::normalizeUrl($url);
+		
+		return self::tag('a',$htmlOptions,$text);
+	}
+	
+	/**
+	 * Generates a mailto link.
+	 * @param string $text 			link body. Therefore you can pass in HTML code such as an image tag.
+	 * @param string $email 		email address. If this is empty, the first parameter (link body) will be treated as the email address.
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated mailto link
+	 */
+	public static function mailto($text,$email='',$htmlOptions=array())
+	{
+		if($email==='')
+			$email=$text;
+		
+		return self::link($text,'mailto:'.$email,$htmlOptions);
+	}
+	
+	/**
+	 * Generates an image tag.
+	 * @param string $src 			the image URL
+	 * @param string $alt 			the alternative text display
+	 * @param array $htmlOptions 	additional HTML attributes (see {@link tag}).
+	 * @return string 				the generated image tag
+	 */
+	public static function image($src,$alt='',$htmlOptions=array())
+	{
+		$htmlOptions['src']=$src;
+		$htmlOptions['alt']=$alt;
+		
+		return self::tag('img',$htmlOptions);
+	}
+	
+	/**
+	 * Generates a button.
+	 * @param string $label 		the button label
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated button tag
+	 */
+	public static function button($label='button',$htmlOptions=array())
+	{
+		$htmlOptions = self::generateClass($htmlOptions,'button');
+		if(!isset($htmlOptions['name']))
+			$htmlOptions['name']="button-".self::$element_count - 1;
+		if(!isset($htmlOptions['type']))
+			$htmlOptions['type']='button';
+		if(!isset($htmlOptions['value']) && $htmlOptions['type']!='image')
+			$htmlOptions['value']=$label;
+		
+		return self::tag('button',$htmlOptions);
+	}
+	
+	/**
+	 * Generates an image submit button.
+	 * @param string $src 			the image URL
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated button tag
+	 */
+	public static function imageButton($src,$htmlOptions=array())
+	{
+		$htmlOptions['src'] = strpos($src)===false ? CONSTANT::image : '';
+		$htmlOptions['src'] .= $src;
+		$htmlOptions['type'] = 'image';
+		
+		return self::button('submit',$htmlOptions);
+	}
+	
+	/**
+	 * Generates a link submit button.
+	 * @param string $label 		the button label
+	 * @param array $htmlOptions 	additional HTML attributes.
+	 * @return string 				the generated button tag
+	 */
+	public static function linkButton($label='submit',$htmlOptionsButton=array(),$htmlOptionsLink=array())
+	{
+		if(!isset($htmlOptions['submit']))
+			$htmlOptions['submit']=isset($htmlOptions['href']) ? $htmlOptions['href'] : '';
+		
+		return self::link(self::button($label, $htmlOptionsButton),'#',$htmlOptionsLink);
+	}
+	
+	
+	
+	
+	
+	
+	
+	/**
+	 * Normalizes the input parameter to be a valid URL.
+	 * If the input parameter is an empty string, the currently requested URL will be returned.
+ 	 *
+	 * If the input parameter is a non-empty string, it is treated as a valid URL and will
+	 * be returned without any change.
+	 *
+	 * @param mixed $url 	the parameter to be used to generate a valid URL
+	 * @return string 		the normalized URL
+	 */
+	public static function normalizeUrl($url)
+	{
+		if(!isset($url))
+			return '';
+		
+		if(is_array($url))
+		{
+			$link = isset($url['href']) ? $url['href'].'?' : $url['url'].'?';
+			unset($url['href']);
+			unset($url['url']);
+			
+			foreach($url as $param => $value)
+				$link .= $param."=".$value."&";
+				
+			$link = substr($link, 0, -1);
+		}else
+			$link = $url;
+		
+		
+		return $link;
+	}
+	
+	
+	
+	/**
+	 * Add class and id style to the element, and also a class for the form control.
+	 * @param string $attributes 		the element attributes
+	 * @return array 					the previusly array adding the new id, class
+	 */
+	protected static function generateClass($attributes,$type)
+	{
+		
+		static $element_count = 0;
+		
+		if(!isset($attributes['id']))
+			$attributes['id'] = "$type-".$element_count;
+		
+		if(isset($attributes['class']))
+			$attributes['class'] .= " $type-".$element_count;
+		else
+			$attributes['class'] = "$type-".$element_count;
+		
+		$element_count++;
+		return $attributes;
+		
+	}
+	
+	/**
+	 * Renders the HTML tag attributes.
+	 * Special attributes, such as 'checked', 'disabled', 'readonly', will be rendered
+	 * properly based on their corresponding boolean value.
+	 * @param array $htmlOptions 	attributes to be rendered
+	 * @return string 				the rendering result
+	 */
+	public static function renderAttributes($attributes)
+	{
+		static $specialAttributes=array(
+			'async'=>1,
+			'autofocus'=>1,
+			'autoplay'=>1,
+			'checked'=>1,
+			'controls'=>1,
+			'declare'=>1,
+			'default'=>1,
+			'defer'=>1,
+			'disabled'=>1,
+			'formnovalidate'=>1,
+			'hidden'=>1,
+			'ismap'=>1,
+			'loop'=>1,
+			'multiple'=>1,
+			'muted'=>1,
+			'nohref'=>1,
+			'noresize'=>1,
+			'novalidate'=>1,
+			'open'=>1,
+			'readonly'=>1,
+			'required'=>1,
+			'reversed'=>1,
+			'scoped'=>1,
+			'seamless'=>1,
+			'selected'=>1,
+			'typemustmatch'=>1,
+		);
+
+		if(empty($attributes))
+			return '';
+
+		$html='';
+		
+		foreach($attributes as $name=>$value)
+		{
+			
+			if(isset($specialAttributes[$name]))
+			{
+				if($value)
+				{
+					$html .= ' ' . $name;
+					if(self::$renderSpecialAttributesValue)
+						$html .= '="' . $name . '"';
+				}
+			}
+			else
+				$html .= ' ' . $name . '="' . self::encode($value) . '"';
+		}
+		
+		return $html;
+	}
+	
+	
+	public static function encode($text)
+	{
+		return htmlspecialchars($text,ENT_QUOTES,CONSTANT::charset,true);
+		
+	}	
+	
+}
+
+?>
