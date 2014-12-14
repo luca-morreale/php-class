@@ -2,6 +2,7 @@
 /**
  * Site manager.
  * @see CDatabase
+ * @see CHtml
  * @see CDebug
  * 
  * @author Luca Morreale
@@ -29,19 +30,22 @@ class CPage extends CDebug{
     private $db;
     
     /**
-     * Initialize the components and variables needed.
+     * Initializes the components and variables needed.
+     * @param array $request    parameters passed with post and get arrays
      */
     public function __construct($request, $debug=false){
         $this->setDebug($debug);
+        
         $this->user = new CUser($debug);
         $this->db = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
         $this->analyzeRequest($request);
-
+		
         $this->debug(__FUNCTION__, $request);
     }
 
     /**
      * Analyzes the data contained in request variables.
+     * @param array $request    parameters passed with post and get arrays
      */
     private function analyzeRequest($request){
 
@@ -56,8 +60,6 @@ class CPage extends CDebug{
         } else {
             $this->page = 'home';
         }
-        
-            $key = explode(CONSTANT::root."index_php?",$key)[1];
 
         $this->debug(__FUNCTION__, $request);
     }
@@ -67,19 +69,23 @@ class CPage extends CDebug{
      */
     public function startPage(){
 
-        echo CHtml::openTag("!DOCTYPE html").'\n';
-        echo CHtml::opentag('html').'\n';
-        echo CHtml::opentag('head').'\n';
+        echo CHtml::openTag("!DOCTYPE html")."\n";
+        echo CHtml::opentag('html')."\n";
+        echo CHtml::opentag('head')."\n";
         $this->renderDefaultTag();
 
         $this->debug(__FUNCTION__, null);
     }
 
+    /**
+     * Closes the head tag and prints the default html object.
+     */
     public function closeHead(){
         
-        echo CHtml::closetag('head').'\n';
-        echo CHtml::opentag('body').'\n';
+        echo CHtml::closetag('head')."\n";
+        echo CHtml::opentag('body')."\n";
         $this->renderDefualtTemplate();
+        $this->debug(__FUNCTION__, null);
     }
 
     /**
@@ -87,8 +93,8 @@ class CPage extends CDebug{
      */
     public function endPage(){
         
-        echo CHtml::closeTag('body').'\n';
-        echo CHtml::closeTag('html').'\n';
+        echo CHtml::closeTag('body')."\n";
+        echo CHtml::closeTag('html')."\n";
         
         $this->debug(__FUNCTION__, null);
     }
@@ -104,7 +110,7 @@ class CPage extends CDebug{
      * Prints the defaults body template.
      */
     private function renderDefualtTemplate(){ //TODO
-
+		
     }
 
     /**
@@ -119,6 +125,8 @@ class CPage extends CDebug{
         } else {
             return array('js' => CONSTANT::js.'login.js',           'php' => CONSTANT::php.'login.php',         'html' => CONSTANT::html.'login.inc');
         }
+        
+        $this->debug(__FUNCTION__,$this->page);
     }
 
     /**
@@ -146,7 +154,7 @@ class CPage extends CDebug{
     }
 
     /**
-     * Give the value of the 'key'
+     * Give the value of the 'key'.
      * @param mixed
      */
     public function get($key){
@@ -168,7 +176,6 @@ class CPage extends CDebug{
     public function getUniqueToken(){
         return md5( uniqid('auth', true) );
     }
-
 
 }
 

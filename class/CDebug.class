@@ -7,55 +7,52 @@
  */
 
 class CDebug{
-	
-	/**
-	 *	State of debug
-	 */
-	private $debug = false;
+    
+    /**
+     *  State of debug
+     */
+    private $debug = false;
 
-	/**
-	 * Set debugging mode
-	 * @param bool $debug 	enabling or disabling the debugging mode in according to this value
-	 */
-	public function setDebug($debug){
-		$this->debug = $debug;
-		if ($this->debug){
+    /**
+     * Sets debugging mode
+     * @param bool $debug   enabling or disabling the debugging mode in according to this value
+     */
+    public function setDebug($debug){
+        $this->debug = $debug;
+        if ($this->debug){
             ini_set("error_reporting", E_ALL);
             ini_set("display_errors", "On");
             ini_set("display_startup_errors", "On");
-        }else{
-        	ini_set("error_reporting", 0);
-            ini_set("display_errors", "Off");
-            ini_set("display_startup_errors", "Off");
         }
 
-	}
+    }
 
-	/**
-	 * Returns the debugging mode used
-	 * @return bool
-	 */
-	public function getDebug(){
-		return $this->debug;
-	}
+    /**
+     * Returns the debugging mode used
+     * @return bool
+     */
+    public function getDebug(){
+        return $this->debug;
+    }
 
-	/**
-	 * Prints parameters for debug if the mode is On
-	 */
-	public function debug($function_name, $args){
-		if(!$this->debug)
-			return;
+    /**
+     * Prints parameters for debug if the mode is On
+     */
+    public function debug($function, $args){
+        if(!$this->debug)
+            return;
 
-		echo CHtml::openTag("p",array('class' => "debug"));
-		
-		if(is_array($args))
-			var_dump($args);
-		else
-			echo $args;
-		echo " FROM $function";
-		echo CHtml::closeTag("p")."<br>";
+        echo CHtml::openTag("p",array('class' => "debug"));
+        
+        if(is_array($args)){
+            var_dump($args);
+        } else {
+            echo $args;
+        }
+        echo " FROM $function";
+        echo CHtml::closeTag("p")."<br>";
 
-	}
+    }
 
 }
 

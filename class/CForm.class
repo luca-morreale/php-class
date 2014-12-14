@@ -15,7 +15,11 @@ class CForm extends CDebug{
      */
     private $db;
 
-    public __construct($debug=false){
+    /**
+     * Initializes all comonents needed and prints the needed scripts, style.
+     * @param bool $debub    flag to activate the debugging mode
+     */
+    public function __construct($debug=false){
 
         $this->setDebug($debug);
         $this->db = new CDatabase(CONSTANT::database,CONSTANT::host,CONSTANT::user,CONSTANT::password);
@@ -24,23 +28,26 @@ class CForm extends CDebug{
         echo CHtml::cssFile('autocomplete');
         echo CHtml::script('',array('src' => 'http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js'));
         echo CHtml::script('',array('src' => 'http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js'));
+        echo CHtml::scriptFile('jquery.autocomplete.min.js');
         
         $this->debug(__FUNCTION__, null);
     }
 
     /**
-     * Start the form.
+     * Starts the form.
      * @param $name      name of the form.
      * @param $action    url to request, as default is the same page the form was created.
      * @param $method    method to send data, as default is POST.
      */
-    public function beginForm($name,$action=$_SERVER['REQUEST_URI'], $method='post'){
+    public function beginForm($name,$action='', $method='post'){
+		if(empty($action))
+			$action = $_SERVER['REQUEST_URI'];
         echo CHtml::beginForm($action, $method, array('role'=>'form', 'accept-charset'=>'UTF-8', 'name'=>'form_'.$name));
         $this->debug(__FUNCTION__,array('name'=>$name,'action'=>$action, 'method'=>$method));
     }
     
     /**
-     * Close the form.
+     * Closes the form.
      */
     public function endForm(){
         echo CHtml::endForm();
@@ -48,7 +55,7 @@ class CForm extends CDebug{
     }
 
     /**
-     * Generete the opening tag for the fieldset.
+     * Generetes the opening tag for the fieldset.
      */
     public function beginFieldset(){
         echo CHtml::openTag('fieldset');
@@ -56,7 +63,7 @@ class CForm extends CDebug{
     }
     
     /**
-     * Generete the closing tag for the fieldset.
+     * Generetes the closing tag for the fieldset.
      */
     public function endFieldset(){
         echo CHtml::closeTag('fieldset');
@@ -64,7 +71,7 @@ class CForm extends CDebug{
     }
     
     /**
-     * Generete the legend's tag.
+     * Generetes the legend's tag.
      * @param $name    name of the fieldset.
      */
     public function insertLegend($name){
@@ -74,14 +81,14 @@ class CForm extends CDebug{
 
     /**
      * Inserts an input field with label
-     * @param $type      type of the input field.
-     * @param $name      name of the input field. (If you have to perform some search on db it has to have the same name of the field in the table)
+     * @param $type        type of the input field.
+     * @param $name        name of the input field. (If you have to perform some search on db it has to have the same name of the field in the table)
      * @param $label       label for this item.
-     * @param $option    html option like class or id for this field.
+     * @param $option      html option like class or id for this field.
      */
     public function addField($type,$name, $label,$option=array()){
-
-        echo CHtml::label($label.': ',$name);
+		if($type != 'hidden')
+			echo CHtml::label($label.': ',$name);
 
         $option = $this->addBootstrap($option,$type);
         echo CHtml::inputField($type, $name, '', $option);
@@ -91,103 +98,59 @@ class CForm extends CDebug{
 
     /**
      * Generates a Text Area.
-     * @param $name     name of the textarea
+     * @param $name        name of the textarea
      * @param $label       label for this item.
-     * @param $option   array, parameter to set in the textarea
-     * @param $text     text to set inside the textarea
+     * @param $option      array, parameter to set in the textarea
+     * @param $text        text to set inside the textarea
      */
     public function insertArea($name, $label, $option=array(),$text=''){
         echo CHtml::label($label.': ',$name);
         $option['name']=$name;
+        $option = $this->addBootstrap($option,'textarea');
         echo CHtml::tag('textarea',$option,$text);
 
-        $this->debug(__FUNCTION__, array($htmlOptions,$text));
+        $this->debug(__FUNCTION__, array($option,$text));
     }
 
     /**
-     * Render an autocomplete field.
+     * Renders an autocomplete field.
      * @param string $name      name of the input field.
+     * @param $label            label for this item.
      * @param mixed $data       information to extract data. Must be selected from the database only two field
-     *                                                  one for the value field (with alias 'id') and the text (with alias as 'label')
-     * @param $label       label for this item.
+     *                                                  one for the value field (with alias 'id') and the text (with alias as 'value')
      * @param array $option     option for the input field. 
      */
-    public function addAutocompleteField($name, $data, $label, $option=array()){
+    public function addAutocompleteField($name, $label, $data, $option=array()){
         
         static $n = 0;
-        echo CHtml::label($label.': ', $name);
-
+        
         $option['id'] = 'autocomplete_'.$n;
         $option['class'] = isset($option['class']) ? $option['class']." autocomplete" : "autocomplete";
-        
-        $this->addField($name."_autocomplete-textfield","text",$option);
-        $this->addField($name,"hidden",array('id' => 'autocomplete_hidden_'.$n, 'class' => 'autocomplete'));
+        $this->addField('text', $name."_autocomplete-textfield",$label, $option);
+        $this->addField("hidden" ,$name, '',array('id' => 'autocomplete_hidden_'.$n, 'class' => 'autocomplete'));
         
 
-        if(isset($data['file'])){
-            $script = '$(function() {
-                            $("#autocomplete_"'.$n.'")autocomplete({
-                                source: function (request, response) {
-                                    $.ajax({
-                                        url: '.$data['file'].',
-                                        dataType: "json",
-                                        data: request,
-                                        success: function( data ) {
-                                            response( $.map( data, function( item ) {
-                                                $("#autocomplete_hidden_'.$n.'").val(ui.id);
-                                            }));
-                                        }
-                                    }); 
-                                },  
-                                minLength: 2
-                                }
-                              });
-                            });';
-            echo CHtml::script($script);
+        if(isset($data['file'])){                      
+            echo CHtml::script($data['script']);
         } else {
-            foreach($data['query'] as $key => $value)
-                $$key =  $value;
-            $this->db->query_select($table,isset($where) ? $where :false, $field, isset($after_where) ? $after_where :false);
+            $query = $this->extractQuery($data['query']);
+            $this->db->query_select($query['table'],$query['where'], $query['field'], $query['after_where']);
             $json = $this->generateJson();
             
-            $script = '$(function () {
-                        var data'.$n.' = '.$json.'
-                            $("#autocomplete_'.$n.'").autocomplete({
-                                source: data'.$n.'
-                                select: function(event,ui){
-                                    $("#autocomplete_hidden_'.$n.'").val(ui.id);
-                                }
-                                minLength: 2
-                            });
-                        });'
+            $script = 'var data'.$n.' = '.$json.'
+						$("#autocomplete_'.$n.'").autocomplete({
+							lookup: data'.$n.',
+							onSelect: function(suggestion){
+								$("#autocomplete_hidden_'.$n.'").val(suggestion.id);
+							}
+						});';
             echo CHtml::script($script);
 
         }
+        $n++;
         $this->debug(__FUNCTION__, array($name,$data,$option));
     }
-    /*
-    Previous Version.
-    $script = "$('#autocomplete_".$n."').autocomplete({
-                        lookup: data".$n.",
-                        onSelect: function (suggestion) {
-                                $('#autocomplete_hidden_".$n."').val(suggestion.data);
-                        }
-                    });";
-
-    function (request, response) {
-                    var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
-
-                    var matching = $.grep(data'.$n.', function (value) {
-                        var name = value.value;
-                        var id = value.id;
-
-                        return matcher.test(name) || matcher.test(id);
-                    });
-                    return response(matching);
-                }
-
-    */
-
+    
     /**
      * Generates a Json file containing the info for the autocomplete field.
      * @return string
@@ -197,7 +160,7 @@ class CForm extends CDebug{
         $a_json_row = array();
         while($this->db->hasNextRecord()){
             $a_json_row["id"] = $this->db->getField("id");
-            $a_json_row["label"] = $this->db->getField("label");
+            $a_json_row["value"] = $this->db->getField("value");
             array_push($a_json, $a_json_row);
         }
 
@@ -208,14 +171,14 @@ class CForm extends CDebug{
     /**
      * Generates a dropdown list by a list
      * @param $name        name of the combo list
+     * @param $label       label for this item.
      * @param $data        array containing the data to create the list; Must be selected from the database only two field
      *                                                  one for the value field (with alias 'id') and the text (with alias as 'label')
-     * @param $label       label for this item.
      * @param $option      array containing the style information.
      */
-    public function insertComboList($name, $data, $label,$option=array()){
+    public function insertComboList($name, $label, $data,$option=array()){
         
-        echo CHtml::label($option['label'].': ',$name);
+        echo CHtml::label($label.': ',$name);
         
         $selected = isset($option["default"]) ? $option["default"] : 0;
         unset($option["default"]);
@@ -223,23 +186,23 @@ class CForm extends CDebug{
         $option['name']=$name;
         echo CHtml::openTag('select',$option);
         $this->renderOptionSet($data,$selected);  
-        echo CHtml::closeTag('select').'\n';
+        echo CHtml::closeTag('select')."\n";
 
         $this->debug(__FUNCTION__ ,array('name'=>$name,'data'=>$data, 'style'=>$option));
     }
 
     /**
-     * Generate an option group.
+     * Generates an option group.
      * @param $name        name for this input field.
-     * @param $data        array containing the data for this input field.
      * @param $label       label for this item.
+     * @param $data        array containing the data for this input field.
      * @param $option      style option.
      */
-    public function insertOptionGroup($name, $data, $label,$option=array()){
+    public function insertOptionGroup($name, $label, $data,$option=array()){
         
-        echo CHtml::label($label.': ', $name).'\n';
+        echo CHtml::label($label.': ', $name)."\n";
 
-        $selected = isset($htmlOptions["default"]) ? $htmlOptions["default"] : 0;
+        $selected = isset($option["default"]) ? $option["default"] : 0;
         unset($option["default"]);
         
         $option['name']=$name;
@@ -247,37 +210,38 @@ class CForm extends CDebug{
         
         foreach($data as $opt => $group){
             
-            echo CHtml::openTag('optgroup',array('label'=>$opt)).'\n';
+            echo CHtml::openTag('optgroup',array('label'=>$opt))."\n";
             $selected -= $this->renderOptionSet($group, $selected);
-            echo CHtml::closeTag('optgroup').'\n';
+            echo CHtml::closeTag('optgroup')."\n";
         }
         
         echo CHtml::closeTag('select');
-        $this->debug(__FUNCTION__,array($data,$htmlOptions));
+        $this->debug(__FUNCTION__,array($data,$option));
     }
 
     /**
-     * Generate a DataList.
+     * Generates a DataList.
      * @param $name         name of the field.
      * @param $label        label of the input.
      * @param $data         array, list of data or a query to perform. The query must select two fields:
      *                                  the string to show must has alias 'label'; the value to send must has alias 'id'.
-     * @param $option   array, parameters for the style. It must contains the key 'id'.
+     * @param $option       array, parameters for the style. It must contains the key 'id'.
      */
     public function insertDataList($name, $label, $data,$option=array()){
                 
-        echo CHtml::label($label, $name).'\n';
+        echo CHtml::label($label.': ', $name)."\n";
         
-        $options['name'] = $name;
+        $option['list'] = $name;
         echo CHtml::tag('input',$option);
         
+        $option['id'] = $name;
         echo CHtml::openTag('datalist',$option);
         
         $this->renderOptionSet($data);
         
         echo CHtml::closeTag('datalist');
         
-        $this->debug(__FUNCTION__, array('name'=>$name,$data,$htmlOptions));
+        $this->debug(__FUNCTION__, array('name'=>$name,'data'=>$data,'option'=>$option));
         
     }
 
@@ -293,7 +257,7 @@ class CForm extends CDebug{
         if(isset($data['query'])){
             
             if(is_array($data['query'])){
-                $query = $this->extractQuery($data);
+                $query = $this->extractQuery($data['query']);
                 $this->db->query_select($query['table'],$query['where'],$query['field'],$query['after_where']);
             } else {
                 $this->db->query($data['query']);
@@ -306,21 +270,21 @@ class CForm extends CDebug{
                 if($count == $selected){
                     $html["selected"] = 1;
                 }
-                echo CHtml::tag('option',array('value'=>$id),$label).'\n';
+                echo CHtml::tag('option',array('value'=>$id),$label)."\n";
                 $count++;
             }
 
         } else {
-            
+            var_dump($data);
             foreach($data as $id => $label){
                 $html['value'] = $id;
                 if($count == $selected){
                     $html["selected"] = 1;
                 }
-                echo CHtml::tag('option',array('value'=>$id),$label).'\n';
+                echo CHtml::tag('option',$html,$label)."\n";
                 $count++;
             }
-
+			
         }
 
         $this->debug(__FUNCTION__, array('data'=>$data , 'selected'=>$selected));
@@ -328,8 +292,8 @@ class CForm extends CDebug{
     }
 
     /**
-     * Extract the information needed to perform a query from the array
-     * @param $args    array containing information
+     * Extracts the information needed to perform a query from the array
+     * @param $args     array containing information
      * @return array
      */
     private function extractQuery($args){
@@ -348,7 +312,7 @@ class CForm extends CDebug{
     }
 
     /**
-     * Add class to get css from bootstrap files.
+     * Adds class to get css from bootstrap files.
      * @param array $opt        html option
      * @param string $type      type of input field
      * @return array
@@ -372,7 +336,7 @@ class CForm extends CDebug{
     }
 
     /**
-     * Generate an unique id for the session.
+     * Generates an unique id for the session.
      */
     public function generateToken(){
         return md5( uniqid('auth', true) );

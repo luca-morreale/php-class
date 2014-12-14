@@ -1,6 +1,12 @@
 <?php
 /**
  * Renders menu from query or from array.
+ * @see CDatabase
+ * @see CHtml
+ * @see CDebug
+ * @see CONSTANT
+ * 
+ * @author Morreale Luca
  */
 class CMenu extends CDebug{
     
@@ -20,6 +26,9 @@ class CMenu extends CDebug{
 
     /**
      * Initializes all the needed components.
+     * @param bool $wrap      flag to ecapsulate the menu in a box
+     * @param array $style    array containing the wanted style for the menu
+     * @param bool $debug     flag for the debugging mode
      */
     public function __construct($wrap=true, $style=array(), $debug=false){
         $this->setDebug($debug);
@@ -33,6 +42,7 @@ class CMenu extends CDebug{
 
     /**
      * Merges the default style with the given one.
+     * @param array $style    array containing the style to set
      */
     private function setStyle($style){
         $default_css = array();
@@ -59,20 +69,18 @@ class CMenu extends CDebug{
     public function renderMenu($args){
 
         if($this->wrap)
-            echo CHtml::openTag('div', $this->css['div']).'\n';
-        echo CHtml::openTag('ul',$this->css['ul']).'\n';
+            echo CHtml::openTag('div', $this->css['div'])."\n";
+        echo CHtml::openTag('ul',$this->css['ul'])."\n";
         
         if(isset($args['query'])){
-            if(!isset($args['query']['where']))
-                $args['query']['where'] = array();
-            $this->renderRecursiveQuery($args['query'], 0);
+            $this->renderRecursiveQuery($this->extractQuery($args['query']), 0);
         } else {
-            $this->renderRecursiveQuery($args);
+            $this->renderRecursiveStatic($args);
         }
 
-        echo CHtml::closeTag('ul').'\n';
+        echo CHtml::closeTag('ul')."\n";
         if($this->wrap)
-            echo CHtml::closeTag('div').'\n';
+            echo CHtml::closeTag('div')."\n";
     }
 
     /**
@@ -80,29 +88,30 @@ class CMenu extends CDebug{
      * @param $args         array containing the indications
      * @param $id_parents   integer indicating the parent menu
      */
-    private function renderReoursiveQuery($args,$id_parents){
-
+    private function renderRecursiveQuery($args,$id_parents){
+        
         $db = new CDatabase(CONSTANT::database,CONSTANT::host,CONSTANT::user,CONSTANT::password);
         $table = $args['table'];
-        $where = array_merge($args['where'], array('sub_menu' => $id_parents));
-        $db->query_select($table,$where);
+        $where = array_merge($args['where'], array('parent_menu' => $id_parents));
+        $field = array_merge($args['field'], array('id'));
+        $db->query_select($table,$where,$field);
         
         while($db->hasNextRecord()){
             foreach($db->getRecord() as $key => $value)
                 $$key = $value;
-
-            echo CHtml::openTag('li',$this->css['li']);
-            echo $this->renderMenuItem(array('label' => $label, 'url' => array("r" => $page))).'\n';
             
-            $where['sub_menu'] = $id;
-            $this->db->query_select($table,$where);
+            echo CHtml::openTag('li',$this->css['li']);
+            echo $this->renderMenuItem(array('label' => $label, 'url' => array("r" => $page)))."\n";
+            
+            $where['parent_menu'] = $id;
+            $this->db->query_select($table,$where,$field);
 
             if($this->db->hasNextRecord()){
-                echo CHtml::openTag('ul', $this->css['ul']).'\n';
-                $this->renderMenuQueryRecursive(array('table'=>$table, 'where'=>$where), $id);
-                echo CHtml::closeTag('ul').'\n';
+                echo CHtml::openTag('ul', $this->css['ul'])."\n";
+                $this->renderRecursiveQuery(array('table'=>$table, 'where'=>$where, 'field'=>$field), $id);
+                echo CHtml::closeTag('ul')."\n";
             }
-            echo CHtml::closeTag('li').'\n';
+            echo CHtml::closeTag('li')."\n";
         }
         
         $this->debug(__FUNCTION__, array('args'=>$args, 'id'=>$id_parents));
@@ -118,16 +127,16 @@ class CMenu extends CDebug{
             $options=isset($item['itemOptions']) ? $item['itemOptions'] : $this->css['li'];
             
             echo CHtml::openTag('li', $options);
-            echo $this->renderMenuItem($item).'\n';
+            echo $this->renderMenuItem($item)."\n";
 
             if(isset($item['items']) && !empty($item['items']))
             {
-                echo CHtml::openTag('ul', isset($item['submenuOptions']) ? $item['submenuOptions'] : $this->css['ul']).'\n';
-                $this->renderRecoursiveStatic($item['items']);
-                echo CHtml::closeTag('ul').'\n';
+                echo CHtml::openTag('ul', isset($item['submenuOptions']) ? $item['submenuOptions'] : $this->css['ul'])."\n";
+                $this->renderRecursiveStatic($item['items']);
+                echo CHtml::closeTag('ul')."\n";
             }
 
-            echo CHtml::closeTag('li').'\n';
+            echo CHtml::closeTag('li')."\n";
         }
 
         $this->debug(__FUNCTION__, $items);
@@ -146,7 +155,32 @@ class CMenu extends CDebug{
         
         return CHtml::tag('span',isset($item['linkOptions']) ? $item['linkOptions'] : $this->css['a'], $item['label']);
     }
-
+    
+    
+    /**
+     * Extract the information needed to perform a query from the array
+     * @param $args    array containing information
+     * @return array
+     */
+    private function extractQuery($args){
+        $array['table'] = $args['table'];
+        if(!isset($args['field'])){
+            $array['field'] = array();
+         } else {
+            $array['field'] = $args['field'];
+        }
+        if(!isset($args['where'])){
+            $array['where'] = array();
+        } else {
+            $array['where'] = $args['where'];
+        }
+        if(!isset($args['after_where'])){
+            $array['after_where'] = array();
+        } else {
+            $array['after_where'] = $args['after_where'];
+        }
+        return $array;
+    }
 }
 
 ?>

@@ -6,7 +6,7 @@
 function Autoload($classname)
 {
     //Can't use __DIR__ as it's only in PHP 5.3+
-    $filename = CONSTANT::root."/class/".($classname).'.class';
+    $filename = CONSTANT::root."class/".($classname).'.class';
     if (is_readable($filename)) {
         include_once $filename;
     }

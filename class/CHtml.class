@@ -465,14 +465,24 @@ class CHtml{
 		
 		if(is_array($url))
 		{
+			$hash = false;
 			$link = isset($url['href']) ? $url['href'].'?' : $url['url'].'?';
 			unset($url['href']);
 			unset($url['url']);
 			
-			foreach($url as $param => $value)
-				$link .= $param."=".$value."&";
-				
-			$link = substr($link, 0, -1);
+			foreach($url as $param => $value){
+				if($value == '#' || $param == '#'){
+					$hash = true;
+				} else {
+					$link .= $param."=".$value."&";
+				}
+			}
+			
+			if(!$hash || sizeof($url)>1)
+				$link = substr($link, 0, -1);
+			if($hash)
+				$link .= '#';
+			
 		}else
 			$link = $url;
 		
@@ -547,31 +557,27 @@ class CHtml{
 			return '';
 
 		$html='';
-		
-		foreach($attributes as $name=>$value)
-		{
+		$hash = false;
+		foreach($attributes as $name=>$value){
 			
-			if(isset($specialAttributes[$name]))
-			{
+			if(isset($specialAttributes[$name])){
 				if($value)
 				{
 					$html .= ' ' . $name;
 					if(self::$renderSpecialAttributesValue)
 						$html .= '="' . $name . '"';
 				}
-			}
-			else
+			} else {
 				$html .= ' ' . $name . '="' . self::encode($value) . '"';
+			}
 		}
 		
 		return $html;
 	}
 	
 	
-	public static function encode($text)
-	{
+	public static function encode($text){
 		return htmlspecialchars($text,ENT_QUOTES,CONSTANT::charset,true);
-		
 	}	
 	
 }
