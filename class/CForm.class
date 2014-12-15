@@ -15,10 +15,6 @@ class CForm extends CDebug{
      */
     private $db;
 
-    /**
-     * Initializes all comonents needed and prints the needed scripts, style.
-     * @param bool $debub    flag to activate the debugging mode
-     */
     public function __construct($debug=false){
 
         $this->setDebug($debug);
@@ -34,7 +30,7 @@ class CForm extends CDebug{
     }
 
     /**
-     * Starts the form.
+     * Start the form.
      * @param $name      name of the form.
      * @param $action    url to request, as default is the same page the form was created.
      * @param $method    method to send data, as default is POST.
@@ -47,7 +43,7 @@ class CForm extends CDebug{
     }
     
     /**
-     * Closes the form.
+     * Close the form.
      */
     public function endForm(){
         echo CHtml::endForm();
@@ -55,7 +51,7 @@ class CForm extends CDebug{
     }
 
     /**
-     * Generetes the opening tag for the fieldset.
+     * Generete the opening tag for the fieldset.
      */
     public function beginFieldset(){
         echo CHtml::openTag('fieldset');
@@ -63,7 +59,7 @@ class CForm extends CDebug{
     }
     
     /**
-     * Generetes the closing tag for the fieldset.
+     * Generete the closing tag for the fieldset.
      */
     public function endFieldset(){
         echo CHtml::closeTag('fieldset');
@@ -71,7 +67,7 @@ class CForm extends CDebug{
     }
     
     /**
-     * Generetes the legend's tag.
+     * Generete the legend's tag.
      * @param $name    name of the fieldset.
      */
     public function insertLegend($name){
@@ -86,7 +82,7 @@ class CForm extends CDebug{
      * @param $label       label for this item.
      * @param $option      html option like class or id for this field.
      */
-    public function addField($type,$name, $label,$option=array()){
+    public function addField($type, $name, $label,$option=array()){
 		if($type != 'hidden')
 			echo CHtml::label($label.': ',$name);
 
@@ -95,13 +91,30 @@ class CForm extends CDebug{
 
         $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
     }
+    
+    /**
+     * Generates a multiple choice field.
+     * @param $type        type of the input field.
+     * @param $name        name of the input field. (If you have to perform some search on db it has to have the same name of the field in the table)
+     * @param $label       label for this item.
+     * @param $values      array containing the text and the respect value for each input.
+     * @param $option      html option like class or id for this field.
+     */
+    public function addMultipleChioice($type, $name, $label, $values, $option=array()){
+		echo CHtml::label($label.': ',$name);
+		
+		foreach($values as $value => $text)
+			echo CHtml::inputField($type,$name,$value,$option).$text;	
+		
+		$this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
+	}
 
     /**
      * Generates a Text Area.
-     * @param $name        name of the textarea
+     * @param $name     name of the textarea
      * @param $label       label for this item.
-     * @param $option      array, parameter to set in the textarea
-     * @param $text        text to set inside the textarea
+     * @param $option   array, parameter to set in the textarea
+     * @param $text     text to set inside the textarea
      */
     public function insertArea($name, $label, $option=array(),$text=''){
         echo CHtml::label($label.': ',$name);
@@ -113,9 +126,9 @@ class CForm extends CDebug{
     }
 
     /**
-     * Renders an autocomplete field.
+     * Render an autocomplete field.
      * @param string $name      name of the input field.
-     * @param $label            label for this item.
+     * @param $label       label for this item.
      * @param mixed $data       information to extract data. Must be selected from the database only two field
      *                                                  one for the value field (with alias 'id') and the text (with alias as 'value')
      * @param array $option     option for the input field. 
@@ -192,7 +205,7 @@ class CForm extends CDebug{
     }
 
     /**
-     * Generates an option group.
+     * Generate an option group.
      * @param $name        name for this input field.
      * @param $label       label for this item.
      * @param $data        array containing the data for this input field.
@@ -220,12 +233,12 @@ class CForm extends CDebug{
     }
 
     /**
-     * Generates a DataList.
+     * Generate a DataList.
      * @param $name         name of the field.
      * @param $label        label of the input.
      * @param $data         array, list of data or a query to perform. The query must select two fields:
      *                                  the string to show must has alias 'label'; the value to send must has alias 'id'.
-     * @param $option       array, parameters for the style. It must contains the key 'id'.
+     * @param $option   array, parameters for the style. It must contains the key 'id'.
      */
     public function insertDataList($name, $label, $data,$option=array()){
                 
@@ -292,8 +305,8 @@ class CForm extends CDebug{
     }
 
     /**
-     * Extracts the information needed to perform a query from the array
-     * @param $args     array containing information
+     * Extract the information needed to perform a query from the array
+     * @param $args    array containing information
      * @return array
      */
     private function extractQuery($args){
@@ -312,7 +325,7 @@ class CForm extends CDebug{
     }
 
     /**
-     * Adds class to get css from bootstrap files.
+     * Add class to get css from bootstrap files.
      * @param array $opt        html option
      * @param string $type      type of input field
      * @return array
@@ -336,7 +349,7 @@ class CForm extends CDebug{
     }
 
     /**
-     * Generates an unique id for the session.
+     * Generate an unique id for the session.
      */
     public function generateToken(){
         return md5( uniqid('auth', true) );
