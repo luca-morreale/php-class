@@ -36,8 +36,8 @@ class CForm extends CDebug{
      * @param $method    method to send data, as default is POST.
      */
     public function beginForm($name,$action='', $method='post'){
-		if(empty($action))
-			$action = $_SERVER['REQUEST_URI'];
+        if(empty($action))
+            $action = $_SERVER['REQUEST_URI'];
         echo CHtml::beginForm($action, $method, array('role'=>'form', 'accept-charset'=>'UTF-8', 'name'=>'form_'.$name));
         $this->debug(__FUNCTION__,array('name'=>$name,'action'=>$action, 'method'=>$method));
     }
@@ -83,8 +83,8 @@ class CForm extends CDebug{
      * @param $option      html option like class or id for this field.
      */
     public function addField($type, $name, $label,$option=array()){
-		if($type != 'hidden')
-			echo CHtml::label($label.': ',$name);
+        if($type != 'hidden')
+            echo CHtml::label($label.': ',$name);
 
         $option = $this->addBootstrap($option,$type);
         echo CHtml::inputField($type, $name, '', $option);
@@ -101,13 +101,13 @@ class CForm extends CDebug{
      * @param $option      html option like class or id for this field.
      */
     public function addMultipleChioice($type, $name, $label, $values, $option=array()){
-		echo CHtml::label($label.': ',$name);
-		
-		foreach($values as $value => $text)
-			echo CHtml::inputField($type,$name,$value,$option).$text;	
-		
-		$this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
-	}
+        echo CHtml::label($label.': ',$name);
+        
+        foreach($values as $value => $text)
+            echo CHtml::inputField($type,$name,$value,$option).$text;   
+        
+        $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
+    }
 
     /**
      * Generates a Text Area.
@@ -146,17 +146,17 @@ class CForm extends CDebug{
         if(isset($data['file'])){                      
             echo CHtml::script($data['script']);
         } else {
-            $query = $this->extractQuery($data['query']);
+            $query = $this->normalizeQuery($data['query']);
             $this->db->query_select($query['table'],$query['where'], $query['field'], $query['after_where']);
             $json = $this->generateJson();
             
             $script = 'var data'.$n.' = '.$json.'
-						$("#autocomplete_'.$n.'").autocomplete({
-							lookup: data'.$n.',
-							onSelect: function(suggestion){
-								$("#autocomplete_hidden_'.$n.'").val(suggestion.id);
-							}
-						});';
+                        $("#autocomplete_'.$n.'").autocomplete({
+                            lookup: data'.$n.',
+                            onSelect: function(suggestion){
+                                $("#autocomplete_hidden_'.$n.'").val(suggestion.id);
+                            }
+                        });';
             echo CHtml::script($script);
 
         }
@@ -270,7 +270,7 @@ class CForm extends CDebug{
         if(isset($data['query'])){
             
             if(is_array($data['query'])){
-                $query = $this->extractQuery($data['query']);
+                $query = $this->normalizeQuery($data['query']);
                 $this->db->query_select($query['table'],$query['where'],$query['field'],$query['after_where']);
             } else {
                 $this->db->query($data['query']);
@@ -297,7 +297,7 @@ class CForm extends CDebug{
                 echo CHtml::tag('option',$html,$label)."\n";
                 $count++;
             }
-			
+            
         }
 
         $this->debug(__FUNCTION__, array('data'=>$data , 'selected'=>$selected));
@@ -309,7 +309,7 @@ class CForm extends CDebug{
      * @param $args    array containing information
      * @return array
      */
-    private function extractQuery($args){
+    private function normalizeQuery($args){
         $array['table'] = $args['table'];
         $array['field'] = $args['field'];
         if(!isset($args['where']))
@@ -321,6 +321,7 @@ class CForm extends CDebug{
         else
             $array['after_where'] = $args['after_where'];
 
+        $this->debug(__FUNCTION__, array('start'=>$args,'result'=>$array));
         return $array;
     }
 

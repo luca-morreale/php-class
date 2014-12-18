@@ -1,0 +1,308 @@
+<?php
+/**
+ * Plots a costumable table with the given data from query or array.
+ * @see CHtml
+ * @see CDatabase
+ * @see CDebug
+ * @see Constant
+ * 
+ * @author Morreale Luca
+ */
+class CTable extends CDebug{
+    
+    /**
+     * Database manager.
+     */
+    private $db;
+    
+    /**
+     * Default css.
+     */
+    private $css = array();
+
+    /**
+     * Data to fill the table.
+     */
+    private $data = array();
+
+    /**
+     * Column's names of the table.
+     */
+    private $fields = array();
+
+    /**
+     * Options for cells with js.
+     */
+    private $js = array();
+
+    /**
+     * Options for cells with links.
+     */
+    private $link = array();
+
+    /**
+     * Initializes all components and variables needed.
+     * @param $data      array or string containing the information regarding the content of the table.
+     * @param $css       array containing the css wanted.
+     * @param $debug     bool to active the debugging mode.
+     */
+    public function __construct($data=array(), $css=array(), $debug=false){
+
+        $this->setDebug($debug);
+        $this->db = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
+        $this->setCss($css);
+        $this->setData($data);
+
+
+        $this->debug(__FUNCTION__, $css);
+    }
+
+    /**
+     * Sets the css merging which one given by the user and the default one.
+     * @param $css    array containin the css given by user
+     */
+    private function setCss($css){
+
+        $this->css['table']['class'] = 'table table-striped dataTable';
+        $this->css['table']['id'] = 'table';
+        $this->css['div']['class'] = 'table-responsive';
+        $this->css['th']['class'] = array();
+        $this->css['td']['class'] = array();
+        $this->css['tr']['class'] = array();
+        /*
+        $this->css['div']['class'] = 
+        $this->css['th']['class'] = 
+        $this->css['td']['class'] = 
+
+        $this->['th']['field_name']['class'] = 
+        $this->['td']['field_name']['class'] = 
+        */
+        $this->css = array_merge($this->css, $css);
+        $this->debug(__FUNCTION__, array('user_css'=>$css,'table_css'=>$this->css));
+    }
+
+    /**
+     * Returns the setted css for the table.
+     * @return array
+     */
+    public function getCss(){
+        return $this->css;
+    }
+
+    /**
+     * Sets field to display.
+     * @param array $field      option of the field. Must contain key 'label' text to display in the header
+     * @param array $tdOption   style for the td which contains data
+     */
+    public function setVisibleField($field, $tdOption=array()){
+        
+        $this->fields[$field['name']]['label'] = $field['label'];
+
+        if(isset($tdOption['class'])){
+            $this->css[$field['name']]['class'] = $field['class'];
+        } elseif(isset($tdOption['id'])) {
+            $this->css[$field['name']]['id'] = $field['id'];
+        } else {
+            $this->css[$field['name']] = array();
+        }
+
+        $this->debug(__FUNCTION__, array('field'=>$field, 'result_field'=>$this->fields, 'css'=>$tdOption, 'css_result'=>$this->css));
+    }
+
+    /**
+     * Sets the content of the table.
+     * @param $data    array or string containing the information regarding the content of the table.
+     */
+    public function setData($data){
+
+        if(isset($data['query'])){
+            $this->data = $this->extractDataQuery($data['query']);
+        } else {
+            $this->data = $data;
+        }
+
+        $this->debug(__FUNCTION__, $data);
+    }
+
+    /**
+     * Specifies that a field is a link and its option.
+     * @param $link      name of the field.
+     * @param $opt       option for the link, like "href".
+     */
+    public function addLink($link, $opt = array()){
+        $this->link[$link] = $opt;
+        $this->debug(__FUNCTION__,array('name'=>$link, 'option'=>$this->flink[$link]));
+    }
+    
+    /**
+     * Specifies that a field is releated with a js script.
+     * @param $js        name of the field.
+     * @param $opt       option for the script.
+     */
+    public function addJs($js, $opt = array()) {
+        $this->js[$js] = $opt;
+        $this->debug(__FUNCTION__,array($this->js[$js], $js));
+    }
+    /**
+     * Extracts data from the given query.
+     * @param $query    array or string contaning the information about the query.
+     * @return array
+     */
+    private function extractDataQuery($query){
+        $data = array();
+        if(is_string($query) && $this->db->isSelectQuery($query)){
+            $this->db->query($query);
+        } else {
+            $query = $this->normalizeQuery($query);
+            $this->db->query_select($query['table'],$query['where'], $query['field'], $query['after_where']);
+        }
+
+        $row = 0;
+        while($this->db->hasNextRecord()){
+            foreach($this->db->getRecord() as $column => $value){
+                $data[$row][$field] = $value;
+            }
+            $row++;
+        }
+
+        $this->debug(__FUNCTION__, array('query'=>$query, 'data'=>$data));
+        return $this->data;
+    }
+
+    /**
+     * Analyzes and normalizes the parameters of the query.
+     * @param $args    array contatining the query
+     * @return array
+     */
+    private function normalizeQuery($args){
+        $array['table'] = $args['table'];
+        $array['field'] = $args['field'];
+        if(!isset($args['where'])){
+            $array['where'] = array();
+        } else {
+            $array['where'] = $args['where'];
+        }
+        if(!isset($args['after_where'])) {
+            $array['after_where'] = array();
+        } else {
+            $array['after_where'] = $args['after_where'];
+        }
+
+        $this->debug(__FUNCTION__, array('start'=>$args,'result'=>$array));
+        return $array;
+    }
+
+    /** 
+     * Renders the table using the previously given data.
+     */
+    public function renderTable(){
+                
+        echo CHtml::openTag("div",$this->css['div']);
+        $this->generateScript($this->css['table']['id']);
+        echo CHtml::openTag("table", $this->css['table']);
+        
+        echo CHtml::openTag("thead");
+            echo CHtml::openTag("tr",$this->css['tr']);
+                foreach($this->fields as $name => $array){
+                    echo CHtml::tag("th", $this->css[$name], $this->fields[$name]['label']);
+                }
+            echo CHtml::closeTag("tr");
+        echo CHtml::closeTag("thead");
+
+        if(empty($this->data) || !isset($this->data)){
+            echo CHtml::openTag("tr",$this->css['tr']);
+                for($i = 0; $i <intval( sizeof( $this->fields ) /2 ); $i++){
+                    echo CHtml::tag("td", array(), "");
+                }
+                echo CHtml::tag("td", array(), "Nessun riscontro");
+            echo CHtml::closeTag("tr");
+        } else {
+            foreach($this->data as $row){
+                echo CHtml::openTag("tr",$this->css['tr']);
+                foreach($this->fields as $name => $label){
+                    echo CHtml::tag('td',array_merge($this->css['td'],$this->css[$name]), $row[$name]);
+                }
+                echo CHtml::closeTag("tr");
+            }
+        }
+
+        echo CHtml::closeTag("table");
+        echo CHtml::closeTag("div");
+
+        $this->debug(__FUNCTION__, null);
+    }
+
+    /**
+     * Includes and prints needed css, js to plot the table.
+     * @param $id       id of table
+     */
+    private function generateScript($id){
+        
+        echo CHtml::scriptFile('jquery-1.9.1.min.js');
+        echo CHtml::script('$(document).ready(function() {
+                                    $("#'.$id.'").dataTable( {
+                                            "pagingType": "full_numbers"
+                                    } );
+                            } );');
+        
+        echo CHtml::script("",array('src'=>'http://code.jquery.com/jquery-1.11.1.min.js'));
+        echo CHtml::script("",array('src'=>'http://cdn.datatables.net/1.10.3/js/jquery.dataTables.min.js'));
+        foreach($this->js as $field => $array){
+            if(isset($this->fields[$field]))
+                echo CHtml::tag('script',array(),$this->js[$field]['script']);
+        }
+        echo CHtml::cssFile('table');
+        echo CHtml::cssFile('bootstrap.min');
+        
+
+        $this->debug(__FUNCTION__, $id);
+    }
+
+    /**
+     * Builds correctly the content of the field
+     * @param $row     array contaning the data for the interested row
+     * @param $name    name of the field
+     * @return string
+     */
+    private function buildText($row,$name){
+        
+        $content = $row[$name];
+
+        if(isset($this->link[$name])){
+
+            $url = 'index.php';
+            if(isset($this->link[$name]['param'])){
+                $url .= '?';
+                foreach($this->link[$name]['param'] as $key => $value)
+                    $url .= $key.'='.$value.'&';
+            }
+            if(isset($this->link[$name]['parse'])){
+                foreach($this->link[$name]['parse'] as $key => $field)
+                    $url .= $key.'='.$row[$field].'&';
+            }
+
+            $url = substr($url,0,-1);
+            $content = CHtml::tag("a",array('href'=>$url),$content);
+        } elseif(isset($this->js[$name])) {
+            $function = $this->js[$name]['function'].'(';
+
+            if(isset($this->js[$name]['param']) || isset($this->js[$name]['parse'])){
+                foreach($this->js[$name]['param'] as $index => $value){
+                    $function .= $value.',';
+                }
+                foreach($this->js[$name]['parse'] as $index => $field){
+                    $function .= $row[$field].',';
+                }
+                $function = substr($js['function'],0,-1);
+            }
+
+            $function .= ')';
+            $content = CHtml::tag("a", array($this->js[$name]['event']=>$function), $content);
+        }
+
+        $this->debug(__FUNCTION__, array('row'=>$row,'name'=>$name, 'result'=>$content, 'js'=>$this->js[$name], 'link'=>$this->link[$name]));
+        return $content;
+        
+    }
+}
+?>

@@ -101,9 +101,11 @@ class CUser extends CDebug{
             global $_SESSION;
             $_SESSION = $this->session;
 
+            $this->db->query_update('user', array('last_login'=>date("Y-m-d H:i:s")), array('id' => $this->id));
+
             return true;
         }
-
+        
         return false;
     }
 

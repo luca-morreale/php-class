@@ -73,7 +73,7 @@ class CMenu extends CDebug{
         echo CHtml::openTag('ul',$this->css['ul'])."\n";
         
         if(isset($args['query'])){
-            $this->renderRecursiveQuery($this->extractQuery($args['query']), 0);
+            $this->renderRecursiveQuery($this->normalizeQuery($args['query']), 0);
         } else {
             $this->renderRecursiveStatic($args);
         }
@@ -162,7 +162,7 @@ class CMenu extends CDebug{
      * @param $args    array containing information
      * @return array
      */
-    private function extractQuery($args){
+    private function normalizeQuery($args){
         $array['table'] = $args['table'];
         if(!isset($args['field'])){
             $array['field'] = array();
@@ -179,6 +179,8 @@ class CMenu extends CDebug{
         } else {
             $array['after_where'] = $args['after_where'];
         }
+        
+        $this->debug(__FUNCTION__, array('start'=>$args,'result'=>$array));
         return $array;
     }
 }
