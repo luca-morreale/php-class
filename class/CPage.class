@@ -39,7 +39,7 @@ class CPage extends CDebug{
         $this->user = new CUser($debug);
         $this->db = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
         $this->analyzeRequest($request);
-		
+        
         $this->debug(__FUNCTION__, $request);
     }
 
@@ -110,7 +110,7 @@ class CPage extends CDebug{
      * Prints the defaults body template.
      */
     private function renderDefualtTemplate(){ //TODO
-		
+        
     }
 
     /**
