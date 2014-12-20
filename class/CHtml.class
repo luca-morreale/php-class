@@ -431,7 +431,7 @@ class CHtml{
             return '';
         
         if(is_array($url)){
-            $hash = false;
+			$hash = false;
             $link = isset($url['href']) ? $url['href'].'?' : $url['url'].'?';
             unset($url['href']);
             unset($url['url']);
@@ -444,14 +444,19 @@ class CHtml{
                 }
             }
             
-            if(!$hash || sizeof($url)>1)
+            if(!$hash || sizeof($url)>1){
                 $link = substr($link, 0, -1);
-            if($hash)
-                $link .= '#';
+            }
+            if($hash){
+                $link = $_SERVER['REQUEST_URI'].'#';
+			}
             
+        } elseif($url == '#') {
+			
+            $link = $_SERVER['REQUEST_URI'].'#';
         } else {
-            $link = $url;
-        }
+			$link = $url;
+		}
         
         return $link;
     }
@@ -463,7 +468,7 @@ class CHtml{
      * @param string $attributes        the element attributes
      * @return array                    the previusly array adding the new id, class
      */
-    protected static function generateClass($attributes,$type){
+    private static function generateClass($attributes,$type){
         
         static $element_count = 0;
         
@@ -521,7 +526,6 @@ class CHtml{
             return '';
 
         $html='';
-        $hash = false;
         foreach($attributes as $name=>$value){
             
             if(isset($specialAttributes[$name])){

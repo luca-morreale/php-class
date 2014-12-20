@@ -149,7 +149,7 @@ class CMenu extends CDebug{
      *                     'url' for the link
      *                     'linkOption' for the style of the link  
      */
-    protected function renderMenuItem($item){
+    private function renderMenuItem($item){
         if(isset($item['url']))
             return CHtml::link($item['label'],$item['url'],isset($item['linkOptions']) ? $item['linkOptions'] : $this->css['a']);
         

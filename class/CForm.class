@@ -83,11 +83,16 @@ class CForm extends CDebug{
      * @param $option      html option like class or id for this field.
      */
     public function addField($type, $name, $label,$option=array()){
-        if($type != 'hidden')
+        
+        if($type != 'hidden' && $type != 'submit')
             echo CHtml::label($label.': ',$name);
 
-        $option = $this->addBootstrap($option,$type);
-        echo CHtml::inputField($type, $name, '', $option);
+        $value = '';
+        if(isset($option['value'])){
+            $value = $option['value'];
+        }
+        $option = $this->addBootstrapClass($option,$type);
+        echo CHtml::inputField($type, $name, $value, $option);
 
         $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
     }
@@ -104,9 +109,22 @@ class CForm extends CDebug{
         echo CHtml::label($label.': ',$name);
         
         foreach($values as $value => $text)
-            echo CHtml::inputField($type,$name,$value,$option).$text;   
+            if($this->isChecked($option, $value)){
+                echo CHtml::inputField($type,$name,$value,$option).$text;
+                unset($option['checked']);
+            } else {
+                echo CHtml::inputField($type,$name,$value,$option).$text;
+            }
         
         $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
+    }
+    
+    /**
+     * Returns a bool as a flag of the checked status
+     * @return bool
+     */
+    private function isChecked($option, $value){
+        return isset($option['checked']) && $option['checked']==$value;
     }
 
     /**
@@ -119,7 +137,7 @@ class CForm extends CDebug{
     public function insertArea($name, $label, $option=array(),$text=''){
         echo CHtml::label($label.': ',$name);
         $option['name']=$name;
-        $option = $this->addBootstrap($option,'textarea');
+        $option = $this->addBootstrapClass($option,'textarea');
         echo CHtml::tag('textarea',$option,$text);
 
         $this->debug(__FUNCTION__, array($option,$text));
@@ -264,7 +282,7 @@ class CForm extends CDebug{
      * @param $selected    item to selected
      * @return int  
      */
-    protected function renderOptionSet($data, $selected=0){
+    private function renderOptionSet($data, $selected=0){
         
         $count = 0;
         if(isset($data['query'])){
@@ -288,9 +306,10 @@ class CForm extends CDebug{
             }
 
         } else {
-            var_dump($data);
+            
             foreach($data as $id => $label){
                 $html['value'] = $id;
+                $html["selected"] = null;
                 if($count == $selected){
                     $html["selected"] = 1;
                 }
@@ -331,7 +350,7 @@ class CForm extends CDebug{
      * @param string $type      type of input field
      * @return array
      */
-    protected function addBootstrap($opt,$type){
+    private function addBootstrapClass($opt,$type){
         if($type != "submit"){
             if(isset($opt['class'])){
                 $opt['class'] .= " form-control";

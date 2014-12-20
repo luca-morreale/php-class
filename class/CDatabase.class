@@ -198,15 +198,17 @@ class CDatabase extends CDebug{
      * 
      */
     public function query_select($table, $condition=false, $field=false, $after_where=false, $before_where=false, $special_condition=false){
-        if(empty($table))
+        if(empty($table)){
             return false;
+        }
         
         $q = 'SELECT ';
         
-        if($field)
+        if($field && $field != '*'){
             $q .= $this->buildString($field,',',false, false);
-         else
+        } else {
             $q .= '* ';
+        }
         
         $q .= 'FROM '.$table.' ';
         
@@ -296,8 +298,9 @@ class CDatabase extends CDebug{
             $q .= $this->buildString($condition,'AND',true);
         }
         
-        if($limit)
+        if($limit){
             $q .= 'LIMIT '.$limit;
+        }
         
         $this->debug(__FUNCTION__,array('table'=>$table,'condition'=>$condition,'limit'=>$limit));
         return $this->query($q,true);
@@ -345,7 +348,7 @@ class CDatabase extends CDebug{
                     $string .= $separator.' ';
             }
             $string = substr($string,0,-strlen($separator)-1);
-        }else{  
+        } else {  
             $string = $args.' ';
         }
         
@@ -444,10 +447,11 @@ class CDatabase extends CDebug{
      */
     public function num(){
         $this->debug(__FUNCTION__,null);
-        
-        if($this->rows > 0)
-            return $this->rows;
-        return $this->affected;
+        if($this->rows > 0){
+			return $this->rows;
+		} else { 
+			return $this->affected;
+		}
     }
 
     /**

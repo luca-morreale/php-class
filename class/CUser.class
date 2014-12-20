@@ -87,13 +87,13 @@ class CUser extends CDebug{
         $this->db->query_select("user", array("user"=>$user));
         $this->db->fetchNextRecord();
 
-        if($this->db->get('password') == crypt($pswd,'$6$rounds'.CONSTANT::rounds.'$'.CONSTANT::salt.'$')){
+        if($this->db->getField('password') == crypt($pswd,'$6$rounds'.CONSTANT::rounds.'$'.CONSTANT::salt.'$')){
 
             $this->session['token'] =   $token;
-            $this->session['id'] =      $this->db->get('id');
-            $this->session['level'] =   $this->db->get('level');
+            $this->session['id'] =      $this->db->getField('id');
+            $this->session['level'] =   $this->db->getField('level');
             $this->session['user'] =    $user;
-            $this->session['name'] =    $this->db->get('name').$this->db->get('surname');
+            $this->session['name'] =    $this->db->getField('name').$this->db->getField('surname');
 
             foreach($this->session as $key => $value)
                 $this->$key = $value;
@@ -166,8 +166,11 @@ class CUser extends CDebug{
         $this->db->query_select('page',array('label' => $page));
         $page_info = $this->db->getNextRecord();
         
-        if($this->level >= $page_info['level'])
+        if($this->db->num() == 0){
+            return false;
+        } elseif($this->level >= $page_info['level']) {
             return true;
+        }
         return false;
     }
 
@@ -180,6 +183,15 @@ class CUser extends CDebug{
             return array('id'=>$this->id,'name'=>$this->$name,'level'=>$this->level);
         return null;
 
+    }
+
+    public function findUser($id){
+        $this->debug(__FUNCTION__, $id);
+
+        $this->db->query_select('user', array('id'=>$id));
+        if($this->db->hasNextRecord())
+            return $this->db->getField('name').$this->db->getField('surname');
+        return false;
     }
 }
 
