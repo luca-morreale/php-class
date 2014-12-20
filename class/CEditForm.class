@@ -1,0 +1,302 @@
+<?php
+
+class CEditForm extends CForm{
+    
+    /**
+     * Database manager.
+     */
+    private $db1;
+    
+    /**
+     * User information handler.
+     */
+    private $user;
+
+    /**
+     * Table where insert the data on db.
+     */
+    private $table;
+
+    /**
+     * Array containing data to upload on db.
+     */
+    private $upload;
+    
+    /**
+     * Array contaning the info to select a single row on db
+     */
+    private $where;
+    
+    /**
+     * Other information to not upload.
+     */
+    private $request;
+
+    /**
+     * Identifier for the data to upload.
+     */
+    private $prefix = 'upload_form_';
+
+    /**
+     * Identifier for the field used to identify the right record.
+     */
+    private $identifier = 'id';
+
+    /**
+     * Result of the insert query.
+     */
+    private $updated_result = false;
+
+    /**
+     * Initializes all components needed.
+     * @param $request    array contaning the data, it has to be the $_REQUEST or better $_POST
+     * @param $table      db's table on which insert data
+     * @param $debug      flag to activate the debugging mode
+     */
+    public function __construct($request, $table, $identifier='id', $debug=false){
+        parent::__construct($debug);
+
+        $this->user = new CUser($debug);
+        $this->db1 = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
+        $this->analyzeRequest($request);
+        $this->identifier = $identifier;
+        $this->table = $table;
+        $this->uploadData();
+        $this->searchData();
+        
+        $this->debug(__FUNCTION__, array('table'=>$table));
+    }
+
+    /**
+     * Analyzes the array $_REQUEST extracting useful data.
+     * @param $request    array all data to analyze.
+     */
+    private function analyzeRequest($request){
+
+        foreach($request as $key=>$value){
+            if(strpos($key, 'id') !== false && strpos($key, 'token')===false){
+                $id = explode($this->identifier, $key)[1];
+                if(empty($id)){
+                    $this->where[$key] = $value;
+                } else {
+                    $this->where[$id] = $value;
+                }
+            } elseif(strpos($key, $this->prefix) !== false && strpos($key, 'token')===false){
+                $key = explode($this->prefix, $key)[1];
+                $this->upload[$key] = $value;
+            } else {
+                $this->request[$key] = $value;
+            }
+        }
+
+        $this->debug(__FUNCTION__, array('request' => $request, 'data'=> $this->where, 'upload'=>$this->upload));
+    }
+
+    /**
+     * Performs a search on the db using the given data.
+     */
+    public function searchData(){
+
+        $this->db1->query_select($this->table, $this->where);
+        if($this->db1->num() > 0){
+            $this->data = $this->db1->getNextRecord();
+        }
+        $this->debug(__FUNCTION__, array('set'=> $this->data));
+    }
+    
+    /**
+     * Uploads the data on the db.
+     */
+    public function uploadData(){
+        
+        if($this->collectedData()){
+            $this->db1->query_update($this->table, $this->upload);
+            if($this->db1->num() > 0){
+                $this->update_result = true;
+            } else {
+                $this->updated_result = false;
+            }
+        } else { 
+            $this->updated_result = false;
+        }
+        $this->debug(__FUNCTION__, array('set'=> $this->upload));
+    }
+
+    /**
+     * Verifies if there are some data to send to the database.
+     * @return bool
+     */
+    public function collectedData(){
+        if(isset($this->request[$this->prefix.'token'])){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns a bool as the result of the upload of the data.
+     * @return bool
+     */
+    public function isUploaded(){
+
+        return $this->updated_result;
+    }
+
+
+
+    /**
+     * Close the form.
+     */
+    public function endForm(){
+
+        parent::addField('hidden', $this->prefix.'token', array('value' => parent::generateToken()));
+        parent::endForm();
+        $this->debug(__FUNCTION__,null);
+    }
+
+    /**
+     * Inserts an input field with label
+     * @param $type        type of the input field.
+     * @param $name        name of the input field. (If you have to perform some search on db it has to have the same name of the field in the table)
+     * @param $label       label for this item.
+     * @param $option      html option like class or id for this field.
+     */
+    public function addField($type, $name, $label,$option=array()){
+        
+        if($type != 'submit'){
+            $option['value'] = $this->data[$name];
+            $name = $this->prefix.''.$name;
+        }
+        parent::addField($type, $name, $label,$option);
+        $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
+    }
+    
+    /**
+     * Generates a multiple choice field.
+     * @param $type        type of the input field.
+     * @param $name        name of the input field. (If you have to perform some search on db it has to have the same name of the field in the table)
+     * @param $label       label for this item.
+     * @param $values      array containing the text and the respect value for each input.
+     * @param $option      html option like class or id for this field.
+     */
+    public function addMultipleChioice($type, $name, $label, $values, $option=array()){
+        
+        foreach($values as $value=>$text)
+            if($this->data[$name] == $value){
+                $option['checked'] = $value;
+            }
+        $name = $this->prefix.''.$name;
+        
+        parent::addMultipleChioice($type, $name, $label, $values, $option);
+        
+        $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
+    }
+
+    /**
+     * Generates a Text Area.
+     * @param $name     name of the textarea
+     * @param $label       label for this item.
+     * @param $option   array, parameter to set in the textarea
+     * @param $text     text to set inside the textarea
+     */
+    public function insertArea($name, $label, $option=array(),$text=''){
+        
+        $text = $this->data[$name];
+        $name = $this->prefix.''.$name;
+        parent::insertArea($name, $label, $option,$text);
+
+        $this->debug(__FUNCTION__, array($option,$text));
+    }
+
+    /**
+     * Render an autocomplete field.
+     * @param string $name      name of the input field.
+     * @param $label       label for this item.
+     * @param mixed $data       information to extract data. Must be selected from the database only two field
+     *                                                  one for the value field (with alias 'id') and the text (with alias as 'value')
+     * @param array $option     option for the input field. 
+     */
+    public function addAutocompleteField($name, $label, $data, $option=array()){
+        
+        $option['value'] = $this->data[$name];
+        $name = $this->prefix.''.$name;
+        parent::addAutocompleteField($name, $label, $data, $option);
+
+        $this->debug(__FUNCTION__, array($name,$data,$option));
+    }
+
+    /**
+     * Generates a dropdown list by a list
+     * @param $name        name of the combo list
+     * @param $label       label for this item.
+     * @param $data        array containing the data to create the list.
+     * @param $option      array containing the style information.
+     */
+    public function insertComboList($name, $label, $data,$option=array()){
+        
+        if($data == 'query'){
+            $data = $this->extractEnumValues($data, $name);
+        }
+        $option['default'] = $this->setDefaultValue($data, $name);
+        echo $option['default'];
+        $name = $this->prefix.''.$name;
+        parent::insertComboList($name, $label, $data,$option);
+
+        $this->debug(__FUNCTION__ ,array('name'=>$name,'data'=>$data, 'style'=>$option));
+    }
+    
+    /**
+     * Returns the index of the default value.
+     * @param $data     array containing the data to display
+     * @param $name     name of the field
+     * @return int
+     */
+    private function setDefaultValue($data, $name){
+        $i=0;
+        foreach($data as $key => $value){
+            if($key == $this->data[$name])
+                return $i;
+            $i++;
+        }
+        return 0;
+    }
+    
+    /**
+     * Returns an array containing all the possible values of an ENUM field.
+     * @param $name     name of the field
+     * @return array
+     */
+    private function extractEnumValues($name){
+        $this->db1->query('SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '.$this->$table.' AND COLUMN_NAME = '.$name);
+        while($this->db1->hasNextRecord()){
+            $data[$this->db1->getField('COLUMN_TYPE')] = $this->db1->getField('COLUMN_TYPE');
+        }
+        
+        $this->debug(__FUNCTION__ ,array('name'=>$name,'data'=>$data));
+        return $data;
+    }
+
+    /**
+     * Generate a DataList.
+     * @param $name         name of the field.
+     * @param $label        label of the input.
+     * @param $data         array, list of data or a query to perform. The query must select two fields:
+     *                                  the string to show must has alias 'label'; the value to send must has alias 'id'.
+     * @param $option   array, parameters for the style. It must contains the key 'id'.
+     */
+    public function insertDataList($name, $label, $data,$option=array()){
+        
+        $option['value'] = $this->data[$name];
+        $name = $this->prefix.''.$name;
+        parent::insertDataList($name, $label, $data,$option);
+        
+        $this->debug(__FUNCTION__, array('name'=>$name,'data'=>$data,'option'=>$option));
+        
+    }
+
+
+
+}
+
+?>
