@@ -431,7 +431,7 @@ class CHtml{
             return '';
         
         if(is_array($url)){
-			$hash = false;
+            $hash = false;
             $link = isset($url['href']) ? $url['href'].'?' : $url['url'].'?';
             unset($url['href']);
             unset($url['url']);
@@ -449,14 +449,14 @@ class CHtml{
             }
             if($hash){
                 $link = $_SERVER['REQUEST_URI'].'#';
-			}
+            }
             
         } elseif($url == '#') {
-			
+            
             $link = $_SERVER['REQUEST_URI'].'#';
         } else {
-			$link = $url;
-		}
+            $link = $url;
+        }
         
         return $link;
     }

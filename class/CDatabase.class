@@ -448,10 +448,10 @@ class CDatabase extends CDebug{
     public function num(){
         $this->debug(__FUNCTION__,null);
         if($this->rows > 0){
-			return $this->rows;
-		} else { 
-			return $this->affected;
-		}
+            return $this->rows;
+        } else { 
+            return $this->affected;
+        }
     }
 
     /**
