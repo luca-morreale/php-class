@@ -160,13 +160,13 @@ class CTable extends CDebug{
         $row = 0;
         while($this->db->hasNextRecord()){
             foreach($this->db->getRecord() as $column => $value){
-                $data[$row][$field] = $value;
+                $data[$row][$column] = $value;
             }
             $row++;
         }
 
         $this->debug(__FUNCTION__, array('query'=>$query, 'data'=>$data));
-        return $this->data;
+        return $data;
     }
 
     /**
