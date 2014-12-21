@@ -59,7 +59,9 @@ class CUser extends CDebug{
      * Analyze the parameters of the session.
      */
     private function analyzeSession(){
-        session_start();
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
         global $_SESSION;
         $this->session = $_SESSION;
 
