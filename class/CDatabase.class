@@ -197,7 +197,7 @@ class CDatabase extends CDebug{
      * @return bool 
      * 
      */
-    public function query_select($table, $condition=false, $field=false, $after_where=false, $before_where=false, $special_condition=false){
+    public function query_select($table, $condition=false, $field=false, $after_where=false, $before_where=false){
         if(empty($table)){
             return false;
         }
@@ -205,7 +205,7 @@ class CDatabase extends CDebug{
         $q = 'SELECT ';
         
         if($field && $field != '*'){
-            $q .= $this->buildString($field,',',false, false);
+            $q .= $this->buildString($field,',',false, false, false);
         } else {
             $q .= '* ';
         }
@@ -217,14 +217,11 @@ class CDatabase extends CDebug{
             $q .= $before_where.' ';
         }
         
-        if($condition){
+        if($condition || $after_where)
             $q .= 'WHERE ';
+        
+        if($condition){
             $q .= $this->buildString($condition,"AND",true).' ';
-        }
-
-        if($special_condition){
-            $special_condition = $this->securizeData($special_condition);           
-            $q .= $special_condition.' ';
         }
         
         if($after_where){
@@ -232,7 +229,7 @@ class CDatabase extends CDebug{
             $q .= $after_where.' ';
         }
         
-        $this->debug(__FUNCTION__,array($table, $condition, $field, $after_where, $before_where, $special_condition));
+        $this->debug(__FUNCTION__,array($table, $condition, $field, $after_where, $before_where));
         return $this->query($q, true);
     }
 
@@ -248,7 +245,7 @@ class CDatabase extends CDebug{
         
         $q = 'INSERT INTO '. $table .' SET ';
         
-        $q .= $this->buildString($set,',',true);
+        $q .= $this->buildString($set,',',true,false);
         
         
         $this->debug(__FUNCTION__,array('table'=>$table, 'set'=>$set));           
@@ -268,7 +265,7 @@ class CDatabase extends CDebug{
         
         $q = 'UPDATE '. $table .' SET ';
         
-        $q .= $this->buildString($set,',',true);
+        $q .= $this->buildString($set,',',true,false);
         
         if($condition){
             $q .= " WHERE ";
@@ -327,32 +324,46 @@ class CDatabase extends CDebug{
      * will generate:
      *       5 ,
      */
-    private function buildString($args, $separator=false, $add_key=false, $quotes=true){
+    private function buildString($array, $sep=false, $use_key=false, $like=true, $quotes=true){
         
         $string = '';
-        $args = $this->securizeData($args);
+        $array = $this->securizeData($array);
         
-        if(is_array($args)){
-            foreach($args as $key=>$value){
-                if($add_key)
-                    $string .= $key.'=';
+        if(is_array($array)){
+            
+            foreach($array as $key => $value){
                 
-                if($quotes && $add_key)
-                    $string .= "'";
-                $string .= $value;
-                if($quotes && $add_key)
-                    $string .= "'";
+                if($use_key){
+                    $string .= $key;
+                    
+                    if(is_string($value) && $like){
+                        $string .= ' LIKE ';
+                    } else {
+                        $string .= '=';
+                    }
+                    
+                    if($quotes){
+                        $string .= "'$value'";
+                    } else {
+                        $string .= $value;
+                    }
+                    
+                } else {
+                    $string .= $value;
+                }
+                
+                if($sep){
+                    $string .= $sep;
+                }
                 $string .= ' ';
-
-                if($separator)
-                    $string .= $separator.' ';
             }
-            $string = substr($string,0,-strlen($separator)-1);
-        } else {  
-            $string = $args.' ';
+            $string = substr($string,0,-strlen($sep)-1);
+            
+        } elseif(is_string($array)){
+            $string = $array;
         }
         
-        $this->debug(__FUNCTION__,array('args'=>$args, 'separator'=>$separator, 'add_key'=>$add_key, 'quotes'=>$quotes));
+        $this->debug(__FUNCTION__,array('args'=>$array, 'separator'=>$sep, 'add_key'=>$use_key, 'like'=>$like, 'quotes'=>$quotes));
         return $string;
     }
 
@@ -476,7 +487,7 @@ class CDatabase extends CDebug{
      * Verifies if the given query is a 'DELETE' query.
      * @return bool
      */
-    private function isDeleteQuery($query){
+    public function isDeleteQuery($query){
         $this->debug(__FUNCTION__,$query);
 
         $query = strtolower($query);
@@ -489,7 +500,7 @@ class CDatabase extends CDebug{
      * Verifies if the given query is a 'INSERT' query.
      * @return bool
      */
-    private function isInsertQuery($query){
+    public function isInsertQuery($query){
         $this->debug(__FUNCTION__,$query);
 
         $query = strtolower($query);
@@ -502,7 +513,7 @@ class CDatabase extends CDebug{
      * Verifies if the given query is a 'UPDATE' query.
      * @return bool
      */
-    private function isUpdateQuery($query){
+    public function isUpdateQuery($query){
         $this->debug(__FUNCTION__,$query);
 
         $query = strtolower($query);
@@ -515,7 +526,7 @@ class CDatabase extends CDebug{
      * Verifies if the given query is a 'SELECT' query.
      * @return bool
      */
-    private function isSelectQuery($query){
+    public function isSelectQuery($query){
         $this->debug(__FUNCTION__,$query);
 
         $query = strtolower($query);
