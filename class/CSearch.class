@@ -1,0 +1,369 @@
+<?php
+/**
+ * Shows a table containing the results of a research on the db following the constraints
+ * given by users by filling out the form.
+ * @see CForm
+ * @see CTable
+ * @see CDatabase
+ * @see CDebug
+ * 
+ * @author Luca Morreale
+ */
+class CSearch extends CTable{
+    
+    /**
+     * Db's table on which perform the search.
+     */
+    private $db_table;
+    
+    /**
+     * Database Manager.
+     */
+    private $db1;
+
+    /**
+     * User information manager.
+     */
+    private $user;
+
+    /**
+     * Prefix for each fields in the form.
+     */
+    private $prefix = 'search_form_';
+
+    /**
+     * Object used to generate the form.
+     */
+    private $form;
+
+    /**
+     * Array containing data to search on db.
+     */
+    private $where;
+    
+    /**
+     * Array contaning the result of the search on the db.
+     */
+    private $data;
+
+    /**
+     * Other information not to upload.
+     */
+    private $request;
+
+    /**
+     * Flag for result of the search.
+     */
+    private $search_result;
+
+    /**
+     * Initializes all components needed.
+     * @param $request    array contaning the data, it has to be the $_REQUEST or better $_POST
+     * @param $table      db's table on which insert data
+     * @param $css        array containing the style for the table
+     * @param $debug      flag to activate the debugging mode
+     */
+    public function __construct($request, $table, $css=array(), $debug=false){
+        
+        parent::__construct(array(), $css, $debug);
+
+        $this->user = new CUser($debug);
+        $this->form = new CForm($debug);
+        $this->db1 = new CDatabase(CONSTANT::database, CONSTANT::host, CONSTANT::user, CONSTANT::password);
+        $this->db_table = $table;
+        $this->analyzeRequest($request);
+        $this->searchData();
+
+        $this->debug(__FUNCTION__, array('request' => $request, 'table'=>$table, 'css'=>$css));
+    }
+
+    /**
+     * Analyzes the array $_REQUEST extracting useful data.
+     * @param $request    array all data to analyze.
+     */
+    private function analyzeRequest($request){
+
+        foreach($request as $key=>$value){
+            if(strpos($key, $this->prefix)!==false && strpos($key, 'token')===false && strpos($key, 'submit')===false){
+                $key = explode($this->prefix, $key)[1];
+                if(is_string($value)){
+                    $this->where[$key] = '%'.$value.'%';
+                } else {
+                    $this->where[$key] = $value;
+                }
+            } else {
+                $this->request[$key] = $value;
+            }
+        }
+        if($this->user->isLogged()){
+            $this->data['user_id'] = $this->user->getUserData()['id'];
+        }
+
+        $this->debug(__FUNCTION__, array('request' => $request, 'data'=> $this->where));
+    }
+
+    /**
+     * Performs a search on the db using the given data.
+     */
+    public function searchData(){
+
+        if($this->collectedData()){
+            $after_where = $this->transformOrder();
+            $this->db1->query_select($this->db_table, $this->where, '*', $after_where);
+            
+            if($this->db1->num() > 0){
+                parent::setData(array('query'=>$this->db1->getLastQuery()));
+                //$this->search_result = true;
+            }   
+        }
+        //$this->search_result = false;
+        $this->debug(__FUNCTION__, array('set'=> $this->db1->getLastQuery()));
+    }
+    
+    /**
+     * Verifies if there are some data to send to the database.
+     * @return bool
+     */
+    public function collectedData(){
+        if(isset($this->request[$this->prefix.'token'])){
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Returns a string containing the 'ORDER BY' clausole if any order field was displayed.
+     * @return string
+     */
+    private function transformOrder(){
+        
+        $order = '';
+        foreach($this->where as $key => $value){
+            if(strpos($key, 'order_')!==false){
+                if($value != '---'){
+                    $order .= $value.' ';
+                }
+                unset($this->where[$key]);
+            }
+        }
+
+        $this->debug(__FUNCTION__, array('order'=>$order, 'condition'=>$this->where));
+        
+        if(!empty($order)){
+            return 'ORDER BY '.$order;
+        } else {
+            return '';
+        }        
+    }
+
+
+    /**
+     * Start the form.
+     * @param $name      name of the form.
+     * @param $action    url to request, as default is the same page the form was created.
+     * @param $method    method to send data, as default is POST.
+     */
+    public function beginForm($name,$action='', $method='post'){
+        if(!$this->collectedData()){
+            $this->form->beginForm($this->prefix.''.$name,$action='', $method='post');
+            $this->debug(__FUNCTION__,array('name'=>$name,'action'=>$action, 'method'=>$method));
+        }
+    }
+    
+    /**
+     * Close the form.
+     */
+    public function endForm(){
+
+        if(!$this->collectedData()){
+            $this->form->addField('hidden', $this->prefix.'token', array('value' => $this->form->generateToken()));
+            $this->form->endForm();
+            $this->debug(__FUNCTION__,null);
+        }
+    }
+
+    /**
+     * Generete the opening tag for the fieldset.
+     */
+    public function beginFieldset(){
+
+        if(!$this->collectedData()){
+            $this->form->beginFieldset();
+            $this->debug(__FUNCTION__,null);
+        }
+    }
+    
+    /**
+     * Generete the closing tag for the fieldset.
+     */
+    public function endFieldset(){
+        
+        if(!$this->collectedData()){
+            $this->form->endFieldset();
+            $this->debug(__FUNCTION__,null);
+        }
+    }
+    
+    /**
+     * Generete the legend's tag.
+     * @param $name    name of the fieldset.
+     */
+    public function insertLegend($name){
+        
+        if(!$this->collectedData()){
+            $this->form->insertLegend($name);
+            $this->debug(__FUNCTION__ ,$name);
+        }
+    }
+
+    /**
+     * Inserts an input field with label
+     * @param $type        type of the input field.
+     * @param $name        name of the input field. (If you have to perform some search on db it has to have the same name of the field in the table)
+     * @param $label       label for this item.
+     * @param $option      html option like class or id for this field.
+     */
+    public function addField($type, $name, $label,$option=array()){
+        
+        if(!$this->collectedData()){
+            $name = $this->prefix.''.$name;
+            $this->form->addField($type, $name, $label,$option);
+            $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
+        }
+    }
+    
+    /**
+     * Generates a multiple choice field.
+     * @param $type        type of the input field.
+     * @param $name        name of the input field. (If you have to perform some search on db it has to have the same name of the field in the table)
+     * @param $label       label for this item.
+     * @param $values      array containing the text and the respect value for each input.
+     * @param $option      html option like class or id for this field.
+     */
+    public function addMultipleChioice($type, $name, $label, $values, $option=array()){
+        
+        if(!$this->collectedData()){
+            $name = $this->prefix.''.$name;
+            $this->form->addMultipleChioice($type, $name, $label, $values, $option);
+            $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
+        }
+    }
+
+    /**
+     * Generates a Text Area.
+     * @param $name     name of the textarea
+     * @param $label       label for this item.
+     * @param $option   array, parameter to set in the textarea
+     * @param $text     text to set inside the textarea
+     */
+    public function insertArea($name, $label, $option=array(),$text=''){
+        
+        if(!$this->collectedData()){
+            $name = $this->prefix.''.$name;
+            $this->form->insertArea($name, $label, $option,$text);
+            $this->debug(__FUNCTION__, array($option,$text));
+        }
+    }
+
+    /**
+     * Render an autocomplete field.
+     * @param string $name      name of the input field.
+     * @param $label       label for this item.
+     * @param mixed $data       information to extract data. Must be selected from the database only two field
+     *                                                  one for the value field (with alias 'id') and the text (with alias as 'value')
+     * @param array $option     option for the input field. 
+     */
+    public function addAutocompleteField($name, $label, $data, $option=array()){
+        
+        if(!$this->collectedData()){
+            $name = $this->prefix.''.$name;
+            $this->form->addAutocompleteField($name, $label, $data, $option);
+            $this->debug(__FUNCTION__, array($name,$data,$option));
+        }
+    }
+
+    /**
+     * Generates a dropdown list by a list
+     * @param $name        name of the combo list
+     * @param $label       label for this item.
+     * @param $data        array containing the data to create the list; Must be selected from the database only two field
+     *                                                  one for the value field (with alias 'id') and the text (with alias as 'label')
+     * @param $option      array containing the style information.
+     */
+    public function insertComboList($name, $label, $data,$option=array()){
+        
+        if(!$this->collectedData()){
+            $name = $this->prefix.''.$name;
+            $this->form->insertComboList($name, $label, $data,$option);
+            $this->debug(__FUNCTION__ ,array('name'=>$name,'data'=>$data, 'style'=>$option));
+        }
+    }
+
+    /**
+     * Generate an option group.
+     * @param $name        name for this input field.
+     * @param $label       label for this item.
+     * @param $data        array containing the data for this input field.
+     * @param $option      style option.
+     */
+    public function insertOptionGroup($name, $label, $data,$option=array()){
+        
+        if(!$this->collectedData()){
+            $name = $this->prefix.''.$name;
+            $this->form->insertOptionGroup($name, $label, $data,$option);
+            $this->debug(__FUNCTION__,array($data,$option));
+        }
+    }
+
+    /**
+     * Generate a DataList.
+     * @param $name         name of the field.
+     * @param $label        label of the input.
+     * @param $data         array, list of data or a query to perform. The query must select two fields:
+     *                                  the string to show must has alias 'label'; the value to send must has alias 'id'.
+     * @param $option   array, parameters for the style. It must contains the key 'id'.
+     */
+    public function insertDataList($name, $label, $data,$option=array()){
+        
+        if(!$this->collectedData()){
+            $name = $this->prefix.''.$name;
+            $this->form->insertDataList($name, $label, $data,$option);
+            $this->debug(__FUNCTION__, array('name'=>$name,'data'=>$data,'option'=>$option));
+        }
+    }
+
+    /**
+     * Inserts an order field with options.
+     * @param $name
+     * @param $option
+     */
+    public function addOrderField($name, $label, $value, $option=array()){
+        
+        if(!$this->collectedData()){
+            
+            $value = array(
+                        array('id'=> '', 'value' => '---'),
+                        array('id'=> $name.' ASC', 'value' => $value['asc']),
+                        array('id'=> $name.' DESC', 'value' => $value['desc']),
+                        );
+            $this->insertComboList($this->prefix.'_order_'.$name, $label, $value, $option);
+
+            $this->debug(__FUNCTION__,array($name, $opt));
+        }
+    }
+
+    /** 
+     * Renders the table using the previously given data.
+     */
+    public function renderTable(){
+         if($this->collectedData()){
+            parent::renderTable();
+        }
+    }
+
+    public function setData($data){}
+
+}
+
+?>
