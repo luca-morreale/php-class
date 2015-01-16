@@ -87,7 +87,7 @@ class CUser extends CDebug{
 
 
         $this->db->query_select("user", array("user"=>$user));
-        $this->db->fetchNextRecord();
+        $this->db->hasNextRecord();
 
         if($this->db->getField('password') == crypt($pswd,'$6$rounds'.CONSTANT::rounds.'$'.CONSTANT::salt.'$')){
 

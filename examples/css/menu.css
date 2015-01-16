@@ -1,0 +1,59 @@
+#mainmenu
+{
+    background:white url(bg.gif) repeat-x left top;
+}
+
+#mainmenu ul
+{
+    padding:6px 20px 5px 20px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    height: 30px;
+}
+
+#mainmenu ul li
+{
+    display: block;
+    height: 28px;
+    float: left;
+    overflow: visible;
+    position: relative;
+}
+#mainmenu li ul
+{
+    position: absolute;
+    top: 24px;
+    left: 10px;
+}
+
+#mainmenu li ul li
+{
+    display: none;
+}
+
+#mainmenu ul li a
+{
+    float: left;
+    display: block;
+    color:silver;
+    background-color:transparent;
+    font-size:12px;
+    font-weight:bold;
+    text-decoration:none;
+    padding:5px 8px;
+    height:100%;
+    padding-bottom:0;
+    margin-bottom:0;
+    border:0;
+    width:150px;
+}
+
+#mainmenu .active a, #mainmenu li:hover > a,#mainmenu li:hover > ul li
+{
+    display: block;
+    color: #6399cd;
+    background-color:#EFF4FA;
+    text-decoration:none;
+}
