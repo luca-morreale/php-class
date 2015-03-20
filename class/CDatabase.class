@@ -29,10 +29,6 @@ class CDatabase extends CDebug{
     private $db;
     
     /**
-     * Last error occured.
-     */
-    private $error;
-    /**
      * Resource of last query performed.
      */
     private $result;
@@ -104,9 +100,9 @@ class CDatabase extends CDebug{
         $this->closeConnection();
         
         if($persistant){
-            $this->connection = @mysqli_pconnect($this->host, $this->user, $this->psw);
+            $this->connection = mysqli_pconnect($this->host, $this->user, $this->psw);
         }else{
-            $this->connection = @mysqli_connect($this->host, $this->user, $this->psw);
+            $this->connection = mysqli_connect($this->host, $this->user, $this->psw);
         }
         
         if(!$this->connection){
@@ -125,7 +121,7 @@ class CDatabase extends CDebug{
     private function useDb(){ 
         $this->debug(__FUNCTION__, null);
 
-        if(!@mysqli_select_db($this->connection,$this->db)){
+        if(!mysqli_select_db($this->connection,$this->db)){
             $this->debug(__FUNCTION__, 'Couldn\'t select to database');
             return false;
         }
@@ -138,7 +134,7 @@ class CDatabase extends CDebug{
      */
     public function closeConnection(){
         if(isset($this->connection)){
-            @mysqli_close($this->connection);
+            mysqli_close($this->connection);
         }
         $this->debug(__FUNCTION__, $this->connection);   
     }
@@ -150,39 +146,44 @@ class CDatabase extends CDebug{
     public function isConnected(){
         $this->debug(__FUNCTION__, null);
         
-        if($this->connection)
+        if ($this->connection) {
             return true;
-        return false;
+        } else {
+            return false;
+        }
     }
             
     /**
      * Executes a query and save the result if it is successful.
      * @param $query_string     string of the query to execute
-     * @param $securize         bool that mean if the query was securize from sql injection
+     * @param $securized         bool that mean if the query was securize from sql injection
      * @return bool
      * 
      */
     public function query($query_string,$securized=false){
         $this->debug(__FUNCTION__,array($query_string,$securized));
 
-        if(!$securized)
+        if (!$securized) {
             $this->last_query = $this->securizeData($query_string);
-        else
+        } else {
             $this->last_query = $query_string;
-        
-        if($this->isDeleteQuery($this->last_query) && !$this->$allow_delete)
-            return false;
+        }
 
-        @mysqli_free_result($this->result);
-        
-        $this->result = @mysqli_query($this->connection, $this->last_query) or $this->debug(__FUNCTION__, "Error during the execution of the query");
-        
-        if($this->result){
-            $this->rows = @mysqli_num_rows($this->result);            
-            $this->affected = @mysqli_affected_rows($this->connection);
-        }else
+        if ($this->isDeleteQuery($this->last_query) && !$this->allow_delete) {
             return false;
+        }
+
+        mysqli_free_result($this->result);
         
+        $this->result = mysqli_query($this->connection, $this->last_query) or $this->debug(__FUNCTION__, "Error during the execution of the query");
+        
+        if ($this->result) {
+            $this->rows = mysqli_num_rows($this->result);
+            $this->affected = mysqli_affected_rows($this->connection);
+        } else {
+            return false;
+        }
+
         return true;
     }
 
@@ -197,39 +198,32 @@ class CDatabase extends CDebug{
      * @return bool 
      * 
      */
-    public function query_select($table, $condition=false, $field=false, $after_where=false, $before_where=false){
+    public function query_select($table, $condition=false, $field=false, $after_where=false){
         if(empty($table)){
             return false;
         }
         
         $q = 'SELECT ';
-        
         if($field && $field != '*'){
             $q .= $this->buildString($field,',',false, false, false);
         } else {
             $q .= '* ';
         }
         
-        $q .= 'FROM '.$table.' ';
-        
-        if($before_where){
-            $before_where = $this->securizeData($before_where);
-            $q .= $before_where.' ';
-        }
-        
-        if($condition || $after_where)
+        $q .= 'FROM ' . $table . ' ';
+        if ($condition || $after_where) {
             $q .= 'WHERE ';
-        
+        }
+
         if($condition){
-            $q .= $this->buildString($condition,"AND",true).' ';
+            $q .= $this->buildString($condition,"AND",true) . ' ';
         }
         
         if($after_where){
-            $after_where = $this->securizeData($after_where);
-            $q .= $after_where.' ';
+            $q .= $this->securizeData($after_where) . ' ';
         }
         
-        $this->debug(__FUNCTION__,array($table, $condition, $field, $after_where, $before_where));
+        $this->debug(__FUNCTION__,array($table, $condition, $field, $after_where));
         return $this->query($q, true);
     }
 
@@ -240,10 +234,11 @@ class CDatabase extends CDebug{
      * @return bool 
      */
     public function query_insert($table, $set){
-        if(empty($table) || empty($set))
+        if (empty($table) || empty($set)) {
             return false;
-        
-        $q = 'INSERT INTO '. $table .' SET ';
+        }
+
+        $q = 'INSERT INTO ' . $table . ' SET ';
         
         $q .= $this->buildString($set,',',true,false);
         
@@ -260,16 +255,16 @@ class CDatabase extends CDebug{
      * @return bool
      */
     public function query_update($table, $set, $condition=false){
-        if(empty($table) || empty($set))
+        if (empty($table) || empty($set)) {
             return false;
-        
-        $q = 'UPDATE '. $table .' SET ';
+        }
+
+        $q = 'UPDATE ' . $table . ' SET ';
         
         $q .= $this->buildString($set,',',true,false);
         
         if($condition){
-            $q .= " WHERE ";
-            $q .= $this->buildString($condition,'AND',true);
+            $q .= " WHERE " . $this->buildString($condition,'AND',true);
         }
         
         $this->debug(__FUNCTION__,array('table'=>$table, 'set'=>$set, 'condition'=>$condition));
@@ -285,18 +280,18 @@ class CDatabase extends CDebug{
      * @return bool
      */
     public function query_delete($table,$condition=false,$limit=false){
-        if(empty($table))
+        if (empty($table)) {
             return false;
-        
-        $q = 'DELETE FROM '. $table .' ';
+        }
+
+        $q = 'DELETE FROM ' . $table . ' ';
         
         if($condition){
-            $q .= 'WHERE ';
-            $q .= $this->buildString($condition,'AND',true);
+            $q .= 'WHERE ' . $this->buildString($condition,'AND',true);
         }
         
         if($limit){
-            $q .= 'LIMIT '.$limit;
+            $q .= 'LIMIT '. $limit;
         }
         
         $this->debug(__FUNCTION__,array('table'=>$table,'condition'=>$condition,'limit'=>$limit));
@@ -373,22 +368,22 @@ class CDatabase extends CDebug{
      * @return mixed
      */
     private function securizeData($args){
-        $data;
+        $data = array();
         if(is_array($args)){
             foreach($args as $key=>$value){
                 if(!is_int($key)){
-                    $key = @mysqli_real_escape_string($this->connection,$key);
+                    $key = mysqli_real_escape_string($this->connection,$key);
                 }
                 if(is_array($value)){
                     $data[$key] = $this->securizeData($value);
                 } elseif(!is_int($value)) {
-                    $data[$key] = @mysqli_real_escape_string($this->connection, $value);
+                    $data[$key] = mysqli_real_escape_string($this->connection, $value);
                 } else {
                     $data[$key] = $value;
                 }
             }
         } elseif(!is_int($args)) {
-            $data = @mysqli_real_escape_string($this->connection, $args);
+            $data = mysqli_real_escape_string($this->connection, $args);
         } else {
             $data = $args;
         }
@@ -404,12 +399,14 @@ class CDatabase extends CDebug{
     public function hasNextRecord(){
         $this->debug(__FUNCTION__,$this->result);
 
-        if(!isset($this->result))
+        if (!isset($this->result)) {
             return false;
-        
-        $this->array = @mysqli_fetch_assoc($this->result);
-        if($this->array)
+        }
+
+        $this->array = mysqli_fetch_assoc($this->result);
+        if ($this->array) {
             return true;
+        }
         return false;
     }
 
@@ -431,8 +428,9 @@ class CDatabase extends CDebug{
     public function getField($field){
         $this->debug(__FUNCTION__,array('field' => $field, 'array' => $this->array));
 
-        if(isset($this->array[$field]))
+        if (isset($this->array[$field])) {
             return $this->array[$field];
+        }
         return null;
         
     }
@@ -446,8 +444,9 @@ class CDatabase extends CDebug{
     public function getNextRecord(){
         $this->debug(__FUNCTION__,$this->result);
 
-        if($this->hasNextRecord())
+        if ($this->hasNextRecord()) {
             return $this->getRecord();
+        }
         return null;
     }
 
@@ -476,8 +475,9 @@ class CDatabase extends CDebug{
         
         $exec = $this->query_select($table,$condition,'count(*)');
         
-        if(!$exec)
+        if (!$exec) {
             return false;
+        }
         $this->hasNextRecord();
         return $this->getField("count(*)");
         
@@ -490,9 +490,10 @@ class CDatabase extends CDebug{
     public function isDeleteQuery($query){
         $this->debug(__FUNCTION__,$query);
 
-        $query = strtolower($query);
-        if(strpos($query,'delete') < 10 && strpos($query,'delete')!==false)
+        $q = strtolower($query);
+        if (strpos($q, 'delete') < 10 && strpos($q, 'delete') !== false) {
             return true;
+        }
         return false;
     }
 
@@ -503,9 +504,10 @@ class CDatabase extends CDebug{
     public function isInsertQuery($query){
         $this->debug(__FUNCTION__,$query);
 
-        $query = strtolower($query);
-        if(strpos($query,'insert') < 10 && strpos($query,'insert')!==false)
+        $q = strtolower($query);
+        if (strpos($q, 'insert') < 10 && strpos($q, 'insert') !== false) {
             return true;
+        }
         return false;
     }
 
@@ -516,9 +518,10 @@ class CDatabase extends CDebug{
     public function isUpdateQuery($query){
         $this->debug(__FUNCTION__,$query);
 
-        $query = strtolower($query);
-        if(strpos($query,'update') < 10 && strpos($query,'update')!==false)
+        $q = strtolower($query);
+        if (strpos($q, 'update') < 10 && strpos($q, 'update') !== false) {
             return true;
+        }
         return false;
     }
 
@@ -529,9 +532,10 @@ class CDatabase extends CDebug{
     public function isSelectQuery($query){
         $this->debug(__FUNCTION__,$query);
 
-        $query = strtolower($query);
-        if(strpos($query,'select') < 10 && strpos($query,'select')!==false)
+        $q = strtolower($query);
+        if (strpos($q, 'select') < 10 && strpos($q, 'select') !== false) {
             return true;
+        }
         return false;
     }
     
@@ -559,7 +563,7 @@ class CDatabase extends CDebug{
      */
     public function getLastInsertID(){
         $this->debug(__FUNCTION__,null);
-        return @mysqli_insert_id($this->$connection);
+        return mysqli_insert_id($this->$connection);
     }
 
     /**
@@ -568,7 +572,7 @@ class CDatabase extends CDebug{
      */
     public function numFields() {
         $this->debug(__FUNCTION__,null);
-        return @mysqli_field_count($this->result);
+        return mysqli_field_count($this->result);
     }
     
     /**
@@ -581,8 +585,9 @@ class CDatabase extends CDebug{
         $i = 0;
         $return = array();
         while ($info = $this->getNextRecord) {
-            foreach($info as $key => $value)
+            foreach ($info as $key => $value) {
                 $return[$i][$key] = $value;
+            }
             $i++;
         }
         
@@ -618,10 +623,11 @@ class CDatabase extends CDebug{
     public function lock($table, $mode = "write") {
         $this->debug(__FUNCTION__,array($table, $mode));
 
-        if (!$this->connection)    
+        if (!$this->connection) {
             $this->connect();
+        }
 
-        $res = @mysqli_query("lock tables $table $mode", $this->connection);
+        $res = mysqli_query("lock tables $table $mode", $this->connection);
         if (!$res){
             $this->debug(__FUNCTION__, "lock($table, $mode) failed.");
             return false;
@@ -636,10 +642,11 @@ class CDatabase extends CDebug{
     public function unlock() {
         $this->debug(__FUNCTION__,null);
 
-        if (!$this->connection)    
+        if (!$this->connection) {
             $this->connect();
+        }
 
-        $res = @mysqli_query("unlock tables");
+        $res = mysqli_query("unlock tables");
         if (!$res){
             $this->debug(__FUNCTION__, "unlock() failed.");
             return false;
