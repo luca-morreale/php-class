@@ -201,35 +201,56 @@ class CTable extends CDebug{
         $this->generateScript($this->css['table']['id']);
         echo CHtml::openTag("table", $this->css['table']);
         
-        echo CHtml::openTag("thead");
-            echo CHtml::openTag("tr",$this->css['tr']);
-                foreach($this->fields as $name => $array){
-                    echo CHtml::tag("th", $this->css[$name], $this->fields[$name]['label']);
-                }
-            echo CHtml::closeTag("tr");
-        echo CHtml::closeTag("thead");
+        $this->renderThead();
 
         if(empty($this->data) || !isset($this->data)){
-            echo CHtml::openTag("tr",$this->css['tr']);
-                for($i = 0; $i <intval( sizeof( $this->fields ) /2 ); $i++){
-                    echo CHtml::tag("td", array(), "");
-                }
-                echo CHtml::tag("td", array(), "Nessun riscontro");
-            echo CHtml::closeTag("tr");
+            $this->renderEmptyData();
         } else {
-            foreach($this->data as $row){
-                echo CHtml::openTag("tr",$this->css['tr']);
-                foreach($this->fields as $name => $label){
-                    echo CHtml::tag('td',array_merge($this->css['td'],$this->css[$name]), $row[$name]);
-                }
-                echo CHtml::closeTag("tr");
-            }
+            $this->renderTableData();
         }
 
         echo CHtml::closeTag("table");
         echo CHtml::closeTag("div");
 
         $this->debug(__FUNCTION__, null);
+    }
+    
+    /**
+     * Render the header part of the table.
+     */
+    private function renderThead(){
+        echo CHtml::openTag("thead");
+        echo CHtml::openTag("tr",$this->css['tr']);
+        foreach(array_keys($this->fields) as $name){
+            echo CHtml::tag("th", $this->css[$name], $this->fields[$name]['label']);
+        }
+        echo CHtml::closeTag("tr");
+        echo CHtml::closeTag("thead");
+    }
+    
+    /**
+     * Render an complete empty row.
+     */
+    private function renderEmptyData(){
+        echo CHtml::openTag("tr",$this->css['tr']);
+        for($i = 0; $i <intval( sizeof( $this->fields ) /2 ); $i++){
+            echo CHtml::tag("td", array(), "");
+        }
+        echo CHtml::tag("td", array(), "Nessun riscontro");
+        echo CHtml::closeTag("tr");
+    }
+    
+    /**
+     * Render table's data.
+     */
+    private function renderTableData(){
+        foreach($this->data as $row){
+            echo CHtml::openTag("tr",$this->css['tr']);
+            foreach(array_keys($this->fields) as $name){
+                echo CHtml::tag('td',array_merge($this->css['td'],$this->css[$name]), $row[$name]);
+            }
+            echo CHtml::closeTag("tr");
+        }
     }
 
     /**
@@ -247,9 +268,10 @@ class CTable extends CDebug{
         
         echo CHtml::script("",array('src'=>'http://code.jquery.com/jquery-1.11.1.min.js'));
         echo CHtml::script("",array('src'=>'http://cdn.datatables.net/1.10.3/js/jquery.dataTables.min.js'));
-        foreach($this->js as $field => $array){
-            if(isset($this->fields[$field]))
-                echo CHtml::tag('script',array(),$this->js[$field]['script']);
+        foreach(array_keys($this->js) as $field){
+            if (isset($this->fields[$field])) {
+                echo CHtml::tag('script', array(), $this->js[$field]['script']);
+            }
         }
         echo CHtml::cssFile('table');
         echo CHtml::cssFile('bootstrap.min');
@@ -269,40 +291,64 @@ class CTable extends CDebug{
         $content = $row[$name];
 
         if(isset($this->link[$name])){
-
-            $url = 'index.php';
-            if(isset($this->link[$name]['param'])){
-                $url .= '?';
-                foreach($this->link[$name]['param'] as $key => $value)
-                    $url .= $key.'='.$value.'&';
-            }
-            if(isset($this->link[$name]['parse'])){
-                foreach($this->link[$name]['parse'] as $key => $field)
-                    $url .= $key.'='.$row[$field].'&';
-            }
-
-            $url = substr($url,0,-1);
-            $content = CHtml::tag("a",array('href'=>$url),$content);
+            $this->renderUrl($name, $row);
         } elseif(isset($this->js[$name])) {
-            $function = $this->js[$name]['function'].'(';
-
-            if(isset($this->js[$name]['param']) || isset($this->js[$name]['parse'])){
-                foreach($this->js[$name]['param'] as $index => $value){
-                    $function .= $value.',';
-                }
-                foreach($this->js[$name]['parse'] as $index => $field){
-                    $function .= $row[$field].',';
-                }
-                $function = substr($js['function'],0,-1);
-            }
-
-            $function .= ')';
-            $content = CHtml::tag("a", array($this->js[$name]['event']=>$function), $content);
+            $this->renderJs($name, $row);
         }
 
         $this->debug(__FUNCTION__, array('row'=>$row,'name'=>$name, 'result'=>$content, 'js'=>$this->js[$name], 'link'=>$this->link[$name]));
         return $content;
         
+    }
+    
+    /**
+     * Render the url using the specified parameters
+     * @param string $name      name of the field which the url will appear
+     * @param array $row        array containing the data
+     */
+    private function renderUrl($name, $row){
+        if(isset($this->link[$name]['param'])){
+            $url = '?';
+            foreach ($this->link[$name]['param'] as $key => $value) {
+                $url .= $key . '=' . $value . '&';
+            }
+        }
+        if(isset($this->link[$name]['parse'])){
+            if(empty($url)) {
+                $url = '?';
+            }
+            foreach ($this->link[$name]['parse'] as $key => $field) {
+                $url .= $key . '=' . $row[$field] . '&';
+            }
+        }
+
+        $url = "index.php" . substr($url,0,-1);
+        $content = CHtml::tag("a",array('href'=>$url),$content);
+        
+        $this->debug(__FUNCTION__, array($name, $row));
+    }
+    
+    /**
+     * Redender the calling to a js function
+     * @param string $name      name of the field which the calling will appear
+     * @param array $row        array containing the information needed
+     */
+    private function renderJs($name, $row){
+        $function = $this->js[$name]['function'].'(';
+
+        if(isset($this->js[$name]['param']) || isset($this->js[$name]['parse'])){
+            foreach($this->js[$name]['param'] as $value){
+                $function .= $value.',';
+            }
+            foreach($this->js[$name]['parse'] as $field){
+                $function .= $row[$field].',';
+            }
+            $function = substr($function,0,-1);
+        }
+        $function .= ')';
+        $content = CHtml::tag("a", array($this->js[$name]['event']=>$function), $content);
+        
+        $this->debug(__FUNCTION__, array($name, $row));
     }
 }
 ?>
