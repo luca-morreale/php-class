@@ -14,11 +14,13 @@ class CForm extends CDebug{
      * Database manager.
      */
     private $db;
+    private $request_uri;
 
     public function __construct($debug=false){
 
         $this->setDebug($debug);
         $this->db = new CDatabase(CONSTANT::database,CONSTANT::host,CONSTANT::user,CONSTANT::password);
+        $this->request_uri = $_SERVER['REQUEST_URI'];
         
         echo CHtml::cssFile('form');
         echo CHtml::cssFile('autocomplete');
@@ -36,8 +38,9 @@ class CForm extends CDebug{
      * @param $method    method to send data, as default is POST.
      */
     public function beginForm($name,$action='', $method='post'){
-        if(empty($action))
-            $action = $_SERVER['REQUEST_URI'];
+        if (empty($action)) {
+            $action = $this->request_uri;
+        }
         echo CHtml::beginForm($action, $method, array('role'=>'form', 'accept-charset'=>'UTF-8', 'name'=>'form_'.$name));
         $this->debug(__FUNCTION__,array('name'=>$name,'action'=>$action, 'method'=>$method));
     }
@@ -84,15 +87,16 @@ class CForm extends CDebug{
      */
     public function addField($type, $name, $label,$option=array()){
         
-        if($type != 'hidden' && $type != 'submit')
-            echo CHtml::label($label.': ',$name);
+        if ($type != 'hidden' && $type != 'submit') {
+            echo CHtml::label($label . ': ', $name);
+        }
 
         $value = '';
         if(isset($option['value'])){
             $value = $option['value'];
         }
-        $option = $this->addBootstrapClass($option,$type);
-        echo CHtml::inputField($type, $name, $value, $option);
+        $opt = $this->addBootstrapClass($option,$type);
+        echo CHtml::inputField($type, $name, $value, $opt);
 
         $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
     }
@@ -108,14 +112,15 @@ class CForm extends CDebug{
     public function addMultipleChioice($type, $name, $label, $values, $option=array()){
         echo CHtml::label($label.': ',$name);
         
-        foreach($values as $value => $text)
-            if($this->isChecked($option, $value)){
-                echo CHtml::inputField($type,$name,$value,$option).$text;
+        foreach ($values as $value => $text) {
+            if ($this->isChecked($option, $value)) {
+                echo CHtml::inputField($type, $name, $value, $option) . $text;
                 unset($option['checked']);
             } else {
-                echo CHtml::inputField($type,$name,$value,$option).$text;
+                echo CHtml::inputField($type, $name, $value, $option) . $text;
             }
-        
+        }
+
         $this->debug(__FUNCTION__ ,array('type'=>$type, 'name'=>$name, 'option'=>$option));
     }
     
@@ -137,8 +142,8 @@ class CForm extends CDebug{
     public function insertArea($name, $label, $option=array(),$text=''){
         echo CHtml::label($label.': ',$name);
         $option['name']=$name;
-        $option = $this->addBootstrapClass($option,'textarea');
-        echo CHtml::tag('textarea',$option,$text);
+        $opt = $this->addBootstrapClass($option,'textarea');
+        echo CHtml::tag('textarea',$opt,$text);
 
         $this->debug(__FUNCTION__, array($option,$text));
     }
@@ -152,7 +157,6 @@ class CForm extends CDebug{
      * @param array $option     option for the input field. 
      */
     public function addAutocompleteField($name, $label, $data, $option=array()){
-        
         static $n = 0;
         
         $option['id'] = 'autocomplete_'.$n;
@@ -166,20 +170,29 @@ class CForm extends CDebug{
         } else {
             $query = $this->normalizeQuery($data['query']);
             $this->db->query_select($query['table'],$query['where'], $query['field'], $query['after_where']);
-            $json = $this->generateJson();
             
-            $script = 'var data'.$n.' = '.$json.'
-                        $("#autocomplete_'.$n.'").autocomplete({
-                            lookup: data'.$n.',
-                            onSelect: function(suggestion){
-                                $("#autocomplete_hidden_'.$n.'").val(suggestion.id);
-                            }
-                        });';
-            echo CHtml::script($script);
-
+            $this->generateAutocompleteScript($n);
         }
         $n++;
         $this->debug(__FUNCTION__, array($name,$data,$option));
+    }
+    
+    /**
+     * Generate the autocomplete js script for the {@n}-th field
+     * @param integer $n
+     */
+    private function generateAutocompleteScript($n){
+        
+        $json = $this->generateJson();
+            
+        $script = 'var data' . $n . ' = ' . $json . '
+                    $("#autocomplete_' . $n . '").autocomplete({
+                        lookup: data' . $n . ',
+                        onSelect: function(suggestion){
+                            $("#autocomplete_hidden_' . $n . '").val(suggestion.id);
+                        }
+                    });';
+        echo CHtml::script($script);
     }
     
     /**
@@ -287,42 +300,50 @@ class CForm extends CDebug{
         $count = 0;
         if(isset($data['query'])){
             
-            if(is_array($data['query'])){
-                $query = $this->normalizeQuery($data['query']);
-                $this->db->query_select($query['table'],$query['where'],$query['field'],$query['after_where']);
-            } else {
-                $this->db->query($data['query']);
-            }
-
+            $this->performOptionSetQuery($data['query']);
+            
             while($this->db->hasNextRecord()){
-                foreach($this->db->getRecord() as $key => $value)
-                    $$key = $value;
-                $html['value'] = $id;
-                if($count == $selected){
-                    $html["selected"] = 1;
-                }
-                echo CHtml::tag('option',array('value'=>$id),$label)."\n";
-                $count++;
+                $this->renderOption($this->db->getField("id"), $this->db->getField("label"), $count++, $selected);
             }
 
         } else {
-            
             foreach($data as $id => $label){
-                $html['value'] = $id;
-                $html["selected"] = null;
-                if($count == $selected){
-                    $html["selected"] = 1;
-                }
-                echo CHtml::tag('option',$html,$label)."\n";
-                $count++;
+                $this->renderOption($id, $label, $count++, $selected);
             }
-            
         }
 
         $this->debug(__FUNCTION__, array('data'=>$data , 'selected'=>$selected));
         return $count;
     }
-
+    
+    /**
+     * Perform the query give in input, checking if is an array or a string.
+     * @param mixed $query      string or array query are accepted
+     */
+    private function performOptionSetQuery($query){
+        if(is_array($query)){
+            $q = $this->normalizeQuery($query);
+            $this->db->query_select($q['table'], $q['where'], $q['field'], $q['after_where']);
+        } else {
+            $this->db->query($query);
+        }
+    }
+    
+    /**
+     * Render a single option.
+     * @param type $id          value of the option
+     * @param type $label       label to show in the list
+     * @param type $count       variable to count the number of elements
+     * @param type $selected    flag to notify which element must be selected
+     */
+    private function renderOption($id, $label, $count, $selected){
+        $html['value'] = $id;
+        if($count == $selected){
+            $html["selected"] = 1;
+        }
+        echo CHtml::tag('option',$html,$label)."\n";
+    }
+    
     /**
      * Extract the information needed to perform a query from the array
      * @param $args    array containing information
@@ -331,14 +352,16 @@ class CForm extends CDebug{
     private function normalizeQuery($args){
         $array['table'] = $args['table'];
         $array['field'] = $args['field'];
-        if(!isset($args['where']))
+        if (!isset($args['where'])) {
             $array['where'] = array();
-        else
+        } else {
             $array['where'] = $args['where'];
-        if(!isset($args['after_where']))
+        }
+        if (!isset($args['after_where'])) {
             $array['after_where'] = array();
-        else
+        } else {
             $array['after_where'] = $args['after_where'];
+        }
 
         $this->debug(__FUNCTION__, array('start'=>$args,'result'=>$array));
         return $array;

@@ -35,10 +35,11 @@ class CHtml{
         
         $html='<' . $tag . self::renderAttributes($htmlOptions);
         
-        if($content===false)
-            return $closeTag ? $html.' />' : $html.'>';
-        else
-            return $closeTag ? $html.'>'.$content.'</'.$tag.'>' : $html.'>'.$content;
+        if ($content === false) {
+            return $closeTag ? $html . ' />' : $html . '>';
+        } else {
+            return $closeTag ? $html . '>' . $content . '</' . $tag . '>' : $html . '>' . $content;
+        }
     }
     
     
@@ -96,14 +97,17 @@ class CHtml{
      */
     public static function metaTag($content,$name=null,$httpEquiv=null,$options=array()){
         
-        if($name === null && $httpEquiv === null)
+        if ($name === null && $httpEquiv === null) {
             return '';
-        
-        if($name!==null)
-            $options['name']=$name;
-        if($httpEquiv!==null)
-            $options['http-equiv']=$httpEquiv;
-        
+        }
+
+        if ($name !== null) {
+            $options['name'] = $name;
+        }
+        if ($httpEquiv !== null) {
+            $options['http-equiv'] = $httpEquiv;
+        }
+
         $options['content']=$content;
         
         return self::tag('meta',$options);
@@ -118,13 +122,16 @@ class CHtml{
      * @return string           the generated link tag
      */
     public static function linkTag($relation=null,$type=null,$href=null,$options=array()){
-        if($relation!==null)
-            $options['rel']=$relation;
-        if($type!==null)
-            $options['type']=$type;
-        if($href!==null)
-            $options['href']=$href;
-        
+        if ($relation !== null) {
+            $options['rel'] = $relation;
+        }
+        if ($type !== null) {
+            $options['type'] = $type;
+        }
+        if ($href !== null) {
+            $options['href'] = $href;
+        }
+
         return self::tag('link',$options);
     }
     
@@ -135,10 +142,11 @@ class CHtml{
      * @return string           the CSS properly enclosed
      */
     public static function css($text,$option=''){
-        if($option!=='')
+        if ($option !== '') {
             $option = self::renderAttributes($option);
-        
-        return "<style type=\"text/css\"{$media}>\n". $text ."\n</style>";
+        }
+
+        return "<style type=\"text/css\">\n". $text ."\n</style>";
     }
     
     /**
@@ -151,9 +159,10 @@ class CHtml{
      */
     public static function refresh($seconds,$url=''){
         $content="$seconds";
-        if($url!=='')
-            $content.=';url='.$url;
-        
+        if ($url !== '') {
+            $content.=';url=' . $url;
+        }
+
         return self::metaTag($content,null,'refresh');
     }
     
@@ -270,18 +279,19 @@ class CHtml{
      * @return string               the generated label tag
      */
     public static function label($label,$for,$htmlOptions=array()){
-        if($for===false)
+        if ($for === false) {
             unset($htmlOptions['for']);
-        else
-            $htmlOptions['for']=$for;
+        } else {
+            $htmlOptions['for'] = $for;
+        }
         if(isset($htmlOptions['required']))
         {
-            if($htmlOptions['required'])
-            {
-                if(isset($htmlOptions['class']))
-                    $htmlOptions['class'].=' '.self::$requiredCss;
-                else
-                    $htmlOptions['class']=self::$requiredCss;
+            if($htmlOptions['required']) {
+                if (isset($htmlOptions['class'])) {
+                    $htmlOptions['class'].=' ' . self::$requiredCss;
+                } else {
+                    $htmlOptions['class'] = self::$requiredCss;
+                }
                 $label=self::$beforeRequiredLabel.$label.self::$afterRequiredLabel;
             }
             unset($htmlOptions['required']);
@@ -320,10 +330,11 @@ class CHtml{
      */
     public static function link($text,$url='#',$htmlOptions=array()){
         if($url!==''){
-            if(!is_array($url))
-                $url = "index.php?".$url;
-            else
+            if (!is_array($url)) {
+                $url = "index.php?" . $url;
+            } else {
                 $url['url'] = "index.php";
+            }
             $htmlOptions['href']= self::normalizeUrl($url);
         }
         
@@ -338,9 +349,10 @@ class CHtml{
      * @return string               the generated hyperlink
      */
     public static function externalLink($text,$url='#',$htmlOptions=array()){
-        if($url!=='')
-            $htmlOptions['href']=self::normalizeUrl($url);
-        
+        if ($url !== '') {
+            $htmlOptions['href'] = self::normalizeUrl($url);
+        }
+
         return self::tag('a',$htmlOptions,$text);
     }
     
@@ -352,9 +364,10 @@ class CHtml{
      * @return string               the generated mailto link
      */
     public static function mailto($text,$email='',$htmlOptions=array()){
-        if($email==='')
-            $email=$text;
-        
+        if ($email === '') {
+            $email = $text;
+        }
+
         return self::link($text,'mailto:'.$email,$htmlOptions);
     }
     
@@ -380,13 +393,16 @@ class CHtml{
      */
     public static function button($label='button',$htmlOptions=array()){
         $htmlOptions = self::generateClass($htmlOptions,'button');
-        if(!isset($htmlOptions['name']))
-            $htmlOptions['name']="button-".self::$element_count - 1;
-        if(!isset($htmlOptions['type']))
-            $htmlOptions['type']='button';
-        if(!isset($htmlOptions['value']) && $htmlOptions['type']!='image')
-            $htmlOptions['value']=$label;
-        
+        if (!isset($htmlOptions['name'])) {
+            $htmlOptions['name'] = "button-" . self::$element_count - 1;
+        }
+        if (!isset($htmlOptions['type'])) {
+            $htmlOptions['type'] = 'button';
+        }
+        if (!isset($htmlOptions['value']) && $htmlOptions['type'] != 'image') {
+            $htmlOptions['value'] = $label;
+        }
+
         return self::tag('button',$htmlOptions);
     }
     
@@ -410,11 +426,12 @@ class CHtml{
      * @param array $htmlOptions    additional HTML attributes.
      * @return string               the generated button tag
      */
-    public static function linkButton($label='submit',$htmlOptionsButton=array(),$htmlOptionsLink=array()){
-        if(!isset($htmlOptions['submit']))
-            $htmlOptions['submit']=isset($htmlOptions['href']) ? $htmlOptions['href'] : '';
-        
-        return self::link(self::button($label, $htmlOptionsButton),'#',$htmlOptionsLink);
+    public static function linkButton($label='submit',$htmlOptions=array()){
+        if (!isset($htmlOptions['submit'])) {
+            $htmlOptions['submit'] = isset($htmlOptions['href']) ? $htmlOptions['href'] : '';
+        }
+
+        return self::link($label,'#',$htmlOptions);
     }
     
     /**
@@ -427,9 +444,10 @@ class CHtml{
      * @return string       the normalized URL
      */
     public static function normalizeUrl($url){
-        if(!isset($url))
+        if (!isset($url)) {
             return '';
-        
+        }
+
         if(is_array($url)){
             $hash = false;
             $link = isset($url['href']) ? $url['href'].'?' : $url['url'].'?';
@@ -452,7 +470,6 @@ class CHtml{
             }
             
         } elseif($url == '#') {
-            
             $link = $_SERVER['REQUEST_URI'].'#';
         } else {
             $link = $url;
@@ -472,14 +489,16 @@ class CHtml{
         
         static $element_count = 0;
         
-        if(!isset($attributes['id']))
-            $attributes['id'] = "$type-".$element_count;
-        
-        if(isset($attributes['class']))
-            $attributes['class'] .= " $type-".$element_count;
-        else
-            $attributes['class'] = "$type-".$element_count;
-        
+        if (!isset($attributes['id'])) {
+            $attributes['id'] = "$type-" . $element_count;
+        }
+
+        if (isset($attributes['class'])) {
+            $attributes['class'] .= " $type-" . $element_count;
+        } else {
+            $attributes['class'] = "$type-" . $element_count;
+        }
+
         $element_count++;
         return $attributes;
         
@@ -489,7 +508,7 @@ class CHtml{
      * Renders the HTML tag attributes.
      * Special attributes, such as 'checked', 'disabled', 'readonly', will be rendered
      * properly based on their corresponding boolean value.
-     * @param array $htmlOptions    attributes to be rendered
+     * @param array $attributes    attributes to be rendered
      * @return string               the rendering result
      */
     public static function renderAttributes($attributes){
@@ -522,8 +541,9 @@ class CHtml{
             'typemustmatch'=>1,
         );
 
-        if(empty($attributes))
+        if (empty($attributes)) {
             return '';
+        }
 
         $html='';
         foreach($attributes as $name=>$value){
@@ -531,8 +551,9 @@ class CHtml{
             if(isset($specialAttributes[$name])){
                 if($value){
                     $html .= ' ' . $name;
-                    if(self::$renderSpecialAttributesValue)
+                    if (self::$renderSpecialAttributesValue) {
                         $html .= '="' . $name . '"';
+                    }
                 }
             } elseif(!empty($value)) {
                 $html .= ' ' . $name . '="' . self::encode($value) . '"';
