@@ -85,12 +85,7 @@ class CSearch extends CTable{
 
         foreach($request as $key=>$value){
             if(strpos($key, $this->prefix)!==false && strpos($key, 'token')===false && strpos($key, 'submit')===false){
-                $key = explode($this->prefix, $key)[1];
-                if(is_string($value)){
-                    $this->where[$key] = '%'.$value.'%';
-                } else {
-                    $this->where[$key] = $value;
-                }
+                $this->addCondition($value);
             } else {
                 $this->request[$key] = $value;
             }
@@ -100,6 +95,19 @@ class CSearch extends CTable{
         }
 
         $this->debug(__FUNCTION__, array('request' => $request, 'data'=> $this->where));
+    }
+    
+    /**
+     * Add to the where array a field used to perform a query.
+     */
+    private function addCondition($value){
+        $key = explode($this->prefix, $key)[1];
+        if(is_string($value)){
+            $this->where[$key] = '%'.$value.'%';
+        } else {
+            $this->where[$key] = $value;
+        }
+        $this->debug(__FUNCTION__, array($value, $this->where));
     }
 
     /**
@@ -138,13 +146,9 @@ class CSearch extends CTable{
      */
     private function transformOrder(){
         
-        $order = '';
         foreach($this->where as $key => $value){
             if(strpos($key, 'order_')!==false){
-                if($value != '---'){
-                    $order .= $value.' ';
-                }
-                unset($this->where[$key]);
+                $order = $this->addOrder($value, $key, $order);
             }
         }
 
@@ -155,6 +159,21 @@ class CSearch extends CTable{
         } else {
             return '';
         }        
+    }
+    
+    /**
+     * Add to a string the order condition
+     * @param string $value     value for the ordering (ascending or descending)
+     * @param string $key       field's name
+     * @param string $order     string containing all order condition
+     */
+    private function addOrder($value, $key, $order){
+        unset($this->where[$key]);
+        if($value != '---'){   
+            return $order . $value . ' ';
+        } else { 
+            return $order . '';
+        }
     }
 
 
@@ -348,9 +367,8 @@ class CSearch extends CTable{
                         array('id'=> $name.' DESC', 'value' => $value['desc']),
                         );
             $this->insertComboList($this->prefix.'_order_'.$name, $label, $value, $option);
-
-            $this->debug(__FUNCTION__,array($name, $opt));
         }
+        $this->debug(__FUNCTION__,array($name, $option));
     }
 
     /** 
