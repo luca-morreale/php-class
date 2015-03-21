@@ -75,12 +75,7 @@ class CEditForm extends CForm{
 
         foreach($request as $key=>$value){
             if(strpos($key, 'id') !== false && strpos($key, 'token')===false){
-                $id = explode($this->identifier, $key)[1];
-                if(empty($id)){
-                    $this->where[$key] = $value;
-                } else {
-                    $this->where[$id] = $value;
-                }
+                $this->addWhere($key, $value);
             } elseif(strpos($key, $this->prefix) !== false && strpos($key, 'token')===false){
                 $key = explode($this->prefix, $key)[1];
                 $this->upload[$key] = $value;
@@ -90,6 +85,20 @@ class CEditForm extends CForm{
         }
 
         $this->debug(__FUNCTION__, array('request' => $request, 'data'=> $this->where, 'upload'=>$this->upload));
+    }
+    
+    /**
+     * Add usable value to where array, it 'll used to perform a query
+     * @param string $key
+     * @param mixed $value
+     */
+    private function addWhere($key, $value){
+        $id = explode($this->identifier, $key)[1];
+        if(empty($id)){
+            $this->where[$key] = $value;
+        } else {
+            $this->where[$id] = $value;
+        }
     }
 
     /**
@@ -182,10 +191,11 @@ class CEditForm extends CForm{
      */
     public function addMultipleChioice($type, $name, $label, $values, $option=array()){
         
-        foreach($values as $value=>$text)
-            if($this->data[$name] == $value){
+        foreach (arrau_keys($values) as $value) {
+            if ($this->data[$name] == $value) {
                 $option['checked'] = $value;
             }
+        }
         $name = $this->prefix.''.$name;
         
         parent::addMultipleChioice($type, $name, $label, $values, $option);
@@ -200,7 +210,7 @@ class CEditForm extends CForm{
      * @param $option   array, parameter to set in the textarea
      * @param $text     text to set inside the textarea
      */
-    public function insertArea($name, $label, $option=array(),$text=''){
+    public function insertArea($name, $label, $option=array()){
         
         $text = $this->data[$name];
         $name = $this->prefix.''.$name;
@@ -254,9 +264,10 @@ class CEditForm extends CForm{
      */
     private function setDefaultValue($data, $name){
         $i=0;
-        foreach($data as $key => $value){
-            if($key == $this->data[$name])
+        foreach(array_keys($data) as $key){
+            if ($key == $this->data[$name]) {
                 return $i;
+            }
             $i++;
         }
         return 0;
@@ -268,9 +279,11 @@ class CEditForm extends CForm{
      * @return array
      */
     private function extractEnumValues($name){
-        $this->db1->query('SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '.$this->$table.' AND COLUMN_NAME = '.$name);
+        $this->db1->query_select("INFORMATION_SCHEMA.COLUMNS", array("TABLE_NAME" => $this->table, 
+                                                    "COLUMN_NAME" => $name), "COLUMN_TYPE");
+        $i = 0;
         while($this->db1->hasNextRecord()){
-            $data[$this->db1->getField('COLUMN_TYPE')] = $this->db1->getField('COLUMN_TYPE');
+            $data[$i++] = $this->db1->getField('COLUMN_TYPE');
         }
         
         $this->debug(__FUNCTION__ ,array('name'=>$name,'data'=>$data));
