@@ -50,8 +50,9 @@ class CPage extends CDebug{
     private function analyzeRequest($request){
 
         foreach($request as $key=>$value){
-            if(strpos($key,CONSTANT::root."index_php?") !== false)
-                $key = explode(CONSTANT::root."index_php?",$key)[1];
+            if (strpos($key, CONSTANT::root . "index_php?") !== false) {
+                $key = explode(CONSTANT::root . "index_php?", $key)[1];
+            }
             $this->request[$key] = $value;
         }
 
