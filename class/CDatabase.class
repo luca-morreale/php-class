@@ -203,11 +203,10 @@ class CDatabase extends CDebug{
             return false;
         }
         
-        $q = 'SELECT ';
         if($field && $field != '*'){
-            $q .= $this->buildString($field,',',false, false, false);
+            $q .= 'SELECT ' . $this->buildString($field,',',false, false, false);
         } else {
-            $q .= '* ';
+            $q .= 'SELECT * ';
         }
         
         $q .= 'FROM ' . $table . ' ';
@@ -241,7 +240,6 @@ class CDatabase extends CDebug{
         $q = 'INSERT INTO ' . $table . ' SET ';
         
         $q .= $this->buildString($set,',',true,false);
-        
         
         $this->debug(__FUNCTION__,array('table'=>$table, 'set'=>$set));           
         return $this->query($q,true);
@@ -299,11 +297,12 @@ class CDatabase extends CDebug{
     }
 
     /** 
-     * Generates a string using the give parameters for the WHERE's clausoles or SELECT's field
-     * @param $args         array or string containg the fields on which works
-     * @param $separator    string used to separe two element
-     * @param $add_key      bool used to specify if must be added the key from the array {@args} and the char '='
-     * @param $quotes       bool to quote the value given in {@args} (won't used quotes if the key is not added)
+     * Generates a string using the give parameters for the WHERE's clausoles or SELECT's field, etc..
+     * @param $array        array or string containg the fields on which works
+     * @param $sep          string used to separate two element
+     * @param $use_key      flag used to notify if must be added the key from the array {@array}
+     * @param $like         flag used to notify in case of a string {@value} to use 'LIKE' operator
+     * @param $quotes       flag used to notify to use quotes (won't used quotes if the key is not added)
      * @return string
      * 
      * Example:
@@ -322,35 +321,12 @@ class CDatabase extends CDebug{
     private function buildString($array, $sep=false, $use_key=false, $like=true, $quotes=true){
         
         $string = '';
-        $array = $this->securizeData($array);
+        $securized = $this->securizeData($array);
         
-        if(is_array($array)){
+        if(is_array($securized)){
             
-            foreach($array as $key => $value){
-                
-                if($use_key){
-                    $string .= $key;
-                    
-                    if(is_string($value) && $like){
-                        $string .= ' LIKE ';
-                    } else {
-                        $string .= '=';
-                    }
-                    
-                    if($quotes){
-                        $string .= "'$value'";
-                    } else {
-                        $string .= $value;
-                    }
-                    
-                } else {
-                    $string .= $value;
-                }
-                
-                if($sep){
-                    $string .= $sep;
-                }
-                $string .= ' ';
+            foreach($securized as $key => $value){
+                $string .= $this->buildElement($key, $value, $use_key, $like, $quotes, $sep) . ' ';
             }
             $string = substr($string,0,-strlen($sep)-1);
             
@@ -360,6 +336,42 @@ class CDatabase extends CDebug{
         
         $this->debug(__FUNCTION__,array('args'=>$array, 'separator'=>$sep, 'add_key'=>$use_key, 'like'=>$like, 'quotes'=>$quotes));
         return $string;
+    }
+    
+    /**
+     * Generates a string to be insert in a query for the specified value
+     * @param mixed  $key         the key string of the {@value}
+     * @param mixed  $value       string or number used in the query
+     * @param bool   $use_key          flag used to notify if must be added the key from the array {@value}
+     * @param bool   $like             flag used to notify in case of a string {@value} to use 'LIKE' operator
+     * @param bool   $quotes           flag used to notify to use quotes
+     * @param string $sep              string used to separate two element
+     * @return string
+     */
+    private function buildElement($key, $value, $use_key, $like, $quotes, $sep){
+        $element = "";
+        if($use_key){
+            $element = $key;
+
+            if(is_string($value) && $like){
+                $element .= ' LIKE ';
+            } else {
+                $element .= '=';
+            }
+
+            if($quotes){
+                $element .= "'$value'";
+            } else {
+                $element .= $value;
+            }
+
+        } else {
+            $element .= $value;
+        }
+        $element .= $sep;
+        
+        $this->debug(__FUNCTION__, $element);
+        return $element;
     }
 
     /**
@@ -371,16 +383,7 @@ class CDatabase extends CDebug{
         $data = array();
         if(is_array($args)){
             foreach($args as $key=>$value){
-                if(!is_int($key)){
-                    $key = mysqli_real_escape_string($this->connection,$key);
-                }
-                if(is_array($value)){
-                    $data[$key] = $this->securizeData($value);
-                } elseif(!is_int($value)) {
-                    $data[$key] = mysqli_real_escape_string($this->connection, $value);
-                } else {
-                    $data[$key] = $value;
-                }
+                $data = array_merge($data, $this->securizeElement($key, $value));
             }
         } elseif(!is_int($args)) {
             $data = mysqli_real_escape_string($this->connection, $args);
@@ -389,6 +392,27 @@ class CDatabase extends CDebug{
         }
         
         $this->debug(__FUNCTION__,array('securized'=>$data, 'args'=>$args));
+        return $data;
+    }
+    
+    /**
+     * Securize a pair of value, {@key} and {@value}, and return it as an array
+     * @param mixed $key        key of the {@value} to securize
+     * @param mixed $value      value of the element
+     * @return array
+     */
+    private function securizeElement($key, $value){
+        $data = array();
+        if(!is_int($key)){
+            $key = mysqli_real_escape_string($this->connection,$key);
+        }
+        if(is_array($value)){
+            $data[$key] = $this->securizeData($value);
+        } elseif(!is_int($value)) {
+            $data[$key] = mysqli_real_escape_string($this->connection, $value);
+        } else {
+            $data[$key] = $value;
+        }
         return $data;
     }
 
@@ -474,7 +498,6 @@ class CDatabase extends CDebug{
         $this->debug(__FUNCTION__,array('table'=>$table, 'condition'=>$condition));
         
         $exec = $this->query_select($table,$condition,'count(*)');
-        
         if (!$exec) {
             return false;
         }
@@ -563,7 +586,7 @@ class CDatabase extends CDebug{
      */
     public function getLastInsertID(){
         $this->debug(__FUNCTION__,null);
-        return mysqli_insert_id($this->$connection);
+        return mysqli_insert_id($this->connection);
     }
 
     /**
