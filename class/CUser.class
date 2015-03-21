@@ -65,15 +65,16 @@ class CUser extends CDebug{
         global $_SESSION;
         $this->session = $_SESSION;
 
-        if(isset($this->session['token'])){
+        if (isset($this->session['token'])) {
             $this->name = $this->session['name'];
             $this->user = $this->session['user'];
             $this->level = $this->session['level'];
             $this->token = $this->session['token'];
             $this->id = $this->session['id'];
-        }else
+        } else {
             $this->token = null;
-            
+        }
+
 
         $this->debug(__FUNCTION__, $this->session);
     }
@@ -97,8 +98,9 @@ class CUser extends CDebug{
             $this->session['user'] =    $user;
             $this->session['name'] =    $this->db->getField('name').$this->db->getField('surname');
 
-            foreach($this->session as $key => $value)
+            foreach ($this->session as $key => $value) {
                 $this->$key = $value;
+            }
 
             global $_SESSION;
             $_SESSION = $this->session;
@@ -141,8 +143,9 @@ class CUser extends CDebug{
     public function isLogged(){
         $this->debug(__FUNCTION__, $this->token);
 
-        if(isset($this->token))
+        if (isset($this->token)) {
             return true;
+        }
         return false;
     }
 
@@ -153,8 +156,9 @@ class CUser extends CDebug{
     public function hasPermission($level){
         $this->debug(__FUNCTION__, $this->level);
 
-        if($this->level >= $level)
+        if ($this->level >= $level) {
             return true;
+        }
         return false;
     }
 
@@ -181,8 +185,9 @@ class CUser extends CDebug{
      * @return array
      */
     public function getUserData(){
-        if($this->isLogged())
-            return array('id'=>$this->id,'name'=>$this->$name,'level'=>$this->level);
+        if ($this->isLogged()) {
+            return array('id' => $this->id, 'name' => $this->$this->name, 'level' => $this->level);
+        }
         return null;
 
     }
@@ -191,8 +196,9 @@ class CUser extends CDebug{
         $this->debug(__FUNCTION__, $id);
 
         $this->db->query_select('user', array('id'=>$id));
-        if($this->db->hasNextRecord())
-            return $this->db->getField('name').$this->db->getField('surname');
+        if ($this->db->hasNextRecord()) {
+            return $this->db->getField('name') . $this->db->getField('surname');
+        }
         return false;
     }
 }

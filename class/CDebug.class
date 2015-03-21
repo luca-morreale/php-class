@@ -39,8 +39,9 @@ class CDebug{
      * Prints parameters for debug if the mode is On
      */
     public function debug($function, $args){
-        if(!$this->debug)
+        if (!$this->debug) {
             return;
+        }
 
         echo CHtml::openTag("p",array('class' => "debug"));
         
