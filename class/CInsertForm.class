@@ -58,9 +58,10 @@ class CInsertForm extends CForm{
         $this->table = $table;
         $this->analyzeRequest($request);
 
-        if($autosend)
+        if ($autosend) {
             $this->sendData();
-        
+        }
+
         $this->debug(__FUNCTION__, array('request'=>$request, 'table'=>$table));
     }
 
@@ -131,7 +132,7 @@ class CInsertForm extends CForm{
      * Changes the value of the file fields.
      */
     private function transformDataFile(){
-        foreach($this->data as $key => $value){
+        foreach(array_keys($this->data) as $key){
             if(strpos($key, 'file_')!==false){
                 $this->data[$key] = $this->uploadFile($key);
             } elseif(strpos($key, 'submit')!==false){
@@ -149,28 +150,28 @@ class CInsertForm extends CForm{
         
         $this->debug(__FUNCTION__, array('file'=>$_FILES, 'name'=>$name));
                 
-        if(empty($_FILES))
+        if (empty($_FILES)) {
             return '';
-        
+        }
+
         $allowedExts = array('gif', 'jpeg', 'jpg', 'png');
         $temp = explode('.', $_FILES[$name]['name']);
         $extension = end($temp);
         $timestamp  = CONSTANT::image."file/" . time() .".". $extension;
 
-        if ((     ($_FILES[$name]['type'] == 'image/gif') || ($_FILES[$name]['type'] == 'image/jpeg') || 
-                  ($_FILES[$name]['type'] == 'image/jpg') || ($_FILES[$name]['type'] == 'image/pjpeg')|| 
-                  ($_FILES[$name]['type'] == 'image/x-png') || ($_FILES[$name]['type'] == 'image/png'))
-            && ($_FILES[$name]['type'] < 20000000) && in_array($extension, $allowedExts)) {
-            
-            if ($_FILES[$name]["error"] > 0){
+        if (( ($_FILES[$name]['type'] == 'image/gif') || ($_FILES[$name]['type'] == 'image/jpeg') ||
+                ($_FILES[$name]['type'] == 'image/jpg') || ($_FILES[$name]['type'] == 'image/pjpeg') ||
+                ($_FILES[$name]['type'] == 'image/x-png') || ($_FILES[$name]['type'] == 'image/png')) && ($_FILES[$name]['type'] < 20000000) && in_array($extension, $allowedExts)) {
+
+            if ($_FILES[$name]["error"] > 0) {
                 return '';
             } else {
                 move_uploaded_file($_FILES[$name]['tmp_name'], $timestamp);
             }
-            
-        } else
+        } else {
             return '';
-        
+        }
+
         return $timestamp;
     }
 
