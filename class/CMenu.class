@@ -68,8 +68,9 @@ class CMenu extends CDebug{
      */
     public function renderMenu($args){
 
-        if($this->wrap)
-            echo CHtml::openTag('div', $this->css['div'])."\n";
+        if ($this->wrap) {
+            echo CHtml::openTag('div', $this->css['div']) . "\n";
+        }
         echo CHtml::openTag('ul',$this->css['ul'])."\n";
         
         if(isset($args['query'])){
@@ -79,8 +80,9 @@ class CMenu extends CDebug{
         }
 
         echo CHtml::closeTag('ul')."\n";
-        if($this->wrap)
-            echo CHtml::closeTag('div')."\n";
+        if ($this->wrap) {
+            echo CHtml::closeTag('div') . "\n";
+        }
     }
 
     /**
@@ -96,19 +98,20 @@ class CMenu extends CDebug{
         $field = array_merge($args['field'], array('id'));
         $db->query_select($table,$where,$field);
         
-        while($db->hasNextRecord()){
-            foreach($db->getRecord() as $key => $value)
-                $$key = $value;
+        while($db->hasNextRecord()) {
             
             echo CHtml::openTag('li',$this->css['li']);
-            echo $this->renderMenuItem(array('label' => $label, 'url' => array("r" => $page)))."\n";
+            echo $this->renderMenuItem(array('label' => $db->getField("label"), 
+                                            'url' => array("r" => $$db->getField("page")) ))."\n";
             
-            $where['parent_menu'] = $id;
             $this->db->query_select($table,$where,$field);
 
             if($this->db->hasNextRecord()){
+                $where['parent_menu'] = $db->getField("id");
+                
                 echo CHtml::openTag('ul', $this->css['ul'])."\n";
-                $this->renderRecursiveQuery(array('table'=>$table, 'where'=>$where, 'field'=>$field), $id);
+                $this->renderRecursiveQuery(array('table' => $table, 'where' => $where, 'field' => $field),
+                                            $db->getField("id"));
                 echo CHtml::closeTag('ul')."\n";
             }
             echo CHtml::closeTag('li')."\n";
@@ -119,7 +122,7 @@ class CMenu extends CDebug{
 
     /**
      * Renders recursively a static menu.
-     * @param $args    array containing the structure of the menu.
+     * @param $items    array containing the structure of the menu.
      */
     private function renderRecursiveStatic($items){
         
@@ -150,9 +153,10 @@ class CMenu extends CDebug{
      *                     'linkOption' for the style of the link  
      */
     private function renderMenuItem($item){
-        if(isset($item['url']))
-            return CHtml::link($item['label'],$item['url'],isset($item['linkOptions']) ? $item['linkOptions'] : $this->css['a']);
-        
+        if (isset($item['url'])) {
+            return CHtml::link($item['label'], $item['url'], isset($item['linkOptions']) ? $item['linkOptions'] : $this->css['a']);
+        }
+
         return CHtml::tag('span',isset($item['linkOptions']) ? $item['linkOptions'] : $this->css['a'], $item['label']);
     }
     
