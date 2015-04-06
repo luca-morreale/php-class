@@ -3,12 +3,12 @@ php-class
 
  PhP classes to create dynamic pages quickly and fully costumable.
  Contains the following classes:
-    -Form generator       (CForm)
-    -Menu generator       (CMenu)
-    -Table generator      (CTable)
-    -Search on database   (CSearch)
-    -Manager of site      (CPage)
-    -MySql manager        (CDatabase)
+- Form generator       (CForm)
+- Menu generator       (CMenu)
+- Table generator      (CTable)
+- Search on database   (CSearch)
+- Manager of site      (CPage)
+- MySql manager        (CDatabase)
 
 ##Configuration
  In your index page instantiates the main class:
@@ -40,12 +40,12 @@ $template = new CPage($_REQUEST,true);
 
 ##Usage
  You have to put your pages, with the same name, in three different folder:
-  - in "page" folder the main content of the page, with .inc extension;
-  - in "php" folder eventually script to execute befor the contento;
-  - in "js" folder all you javascript, jquery script you need.
+  - in "page" folder the main content of the page, with ```.inc``` extension;
+  - in "php" folder eventually script to execute before the content;
+  - in "js" folder all javascript, jquery script you need.
 
- To use that classes you just have to instantiate the one you need in your pages, see some examples below.
- On the first line of your html page you have to close the head tag with:
+To use that classes you just have to instantiate the one you need in your pages, see some examples below.
+On the first line of your html page you have to close the head tag with:
  ```php
 $template->renderHead();
 ```
@@ -123,7 +123,7 @@ $search->setVisibleField(array('name'=>'level', 'label'=>'Level'));
 $search->renderTable();
 ```
 
-For more examples see the folders "examples".
+For more examples see the folders ```examples```.
 
 ##License
  See LICENSE
